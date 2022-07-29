@@ -5,7 +5,7 @@ import (
 
 	"github.com/dgruber/drmaa2interface"
 	"github.com/dgruber/drmaa2os"
-	gcpbatchtracker "github.com/dgruber/gcpbatchtrackertracker"
+	"github.com/dgruber/gcpbatchtracker"
 )
 
 func main() {

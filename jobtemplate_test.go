@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/dgruber/drmaa2interface"
-	. "github.com/dgruber/gcpbatchtrackertracker"
+	. "github.com/dgruber/gcpbatchtracker"
 )
 
 var _ = Describe("Jobtemplate", func() {

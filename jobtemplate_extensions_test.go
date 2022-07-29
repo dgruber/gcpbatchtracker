@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/dgruber/drmaa2interface"
-	. "github.com/dgruber/gcpbatchtrackertracker"
+	. "github.com/dgruber/gcpbatchtracker"
 )
 
 var _ = Describe("JobtemplateExtensions", func() {
