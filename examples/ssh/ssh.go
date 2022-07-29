@@ -26,7 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	tracker, err := gcpbatchtracker.NewGCPBatchTracker(os.Args[1], "us-central1")
+	tracker, err := gcpbatchtracker.NewGCPBatchTracker("", os.Args[1], "us-central1")
 	if err != nil {
 		panic(err)
 	}

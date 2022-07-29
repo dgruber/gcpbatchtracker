@@ -2,17 +2,27 @@ module github.com/dgruber/gcpbatchtrackertracker
 
 go 1.18
 
+replace (
+	github.com/dgruber/drmaa2os => github.com/dgruber/drmaa2os v0.3.22-0.20220729104336-9770b6a1c08f
+)
+
 require (
 	cloud.google.com/go/batch v0.1.0
 	github.com/dgruber/drmaa2interface v1.0.2
 )
 
-require gopkg.in/yaml.v3 v3.0.1 // indirect
+require (
+	code.cloudfoundry.org/lager v2.0.0+incompatible // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	go.etcd.io/bbolt v1.3.6 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
 
 require (
 	cloud.google.com/go v0.102.0 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
-	github.com/dgruber/drmaa2os v0.3.21
+	github.com/dgruber/drmaa2os v0.3.22-0.20220729104336-9770b6a1c08f
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect

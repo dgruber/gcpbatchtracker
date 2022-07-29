@@ -8,11 +8,17 @@ import (
 
 	batch "cloud.google.com/go/batch/apiv1"
 	"github.com/dgruber/drmaa2interface"
+	"github.com/dgruber/drmaa2os"
 	"github.com/dgruber/drmaa2os/pkg/helper"
 	"github.com/dgruber/drmaa2os/pkg/jobtracker"
 	"google.golang.org/api/iterator"
 	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 )
+
+// init registers the GoogleBatch tracker at the SessionManager
+func init() {
+	drmaa2os.RegisterJobTracker(drmaa2os.GoogleBatchSession, NewAllocator())
+}
 
 // GCPBatchTracker implements the JobTracker interface so that it can be
 // used as backend in drmaa2os project.
@@ -22,18 +28,21 @@ type GCPBatchTracker struct {
 	project string
 	// GCP location
 	location string
+	// job session name
+	drmaa2session string
 }
 
-func NewGCPBatchTracker(project, location string) (*GCPBatchTracker, error) {
+func NewGCPBatchTracker(drmaa2session string, project, location string) (*GCPBatchTracker, error) {
 	ctx := context.Background()
 	c, err := batch.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &GCPBatchTracker{
-		client:   c,
-		project:  project,
-		location: location,
+		client:        c,
+		project:       project,
+		location:      location,
+		drmaa2session: drmaa2session,
 	}, nil
 }
 
