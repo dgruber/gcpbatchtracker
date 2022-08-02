@@ -34,8 +34,8 @@ func main() {
 		JobCategory:       "ucdagru/bssh:latest",
 		RemoteCommand:     "/bin/sh",
 		Args:              []string{"-c", string(jobScript)},
-		MinSlots:          4,
-		MaxSlots:          4,
+		MinSlots:          4,  // parallelism
+		MaxSlots:          4,  // how many tasks
 		Priority:          50, // from 0 to 100
 		CandidateMachines: []string{"e2-standard-4"},
 		ResourceLimits: map[string]string{

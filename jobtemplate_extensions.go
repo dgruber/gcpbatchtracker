@@ -11,6 +11,7 @@ const (
 	ExtensionProlog        = "prolog"
 	ExtensionSpot          = "spot"
 	ExctensionAccelerators = "accelerators"
+	ExtensionTasksPerNode  = "tasks_per_node"
 )
 
 func GetMachinePrologExtension(jt drmaa2interface.JobTemplate) (string, bool) {
@@ -77,6 +78,28 @@ func SetAcceleratorsExtension(jt drmaa2interface.JobTemplate, count int64, accel
 			jt.ExtensionList = make(map[string]string)
 		}
 		jt.ExtensionList[ExctensionAccelerators] = strconv.FormatInt(count, 10) + "*" + accelerator
+	}
+	return jt
+}
+
+func GetTasksPerNodeExtension(jt drmaa2interface.JobTemplate) (int64, bool) {
+	if jt.ExtensionList == nil {
+		return 1, false
+	}
+	extension, hasExtensions := jt.ExtensionList[ExtensionTasksPerNode]
+	if hasExtensions {
+		count, _ := strconv.ParseInt(extension, 10, 64)
+		return count, true
+	}
+	return 1, false
+}
+
+func SetTasksPerNodeExtension(jt drmaa2interface.JobTemplate, count int64) drmaa2interface.JobTemplate {
+	if count > 0 {
+		if jt.ExtensionList == nil {
+			jt.ExtensionList = make(map[string]string)
+		}
+		jt.ExtensionList[ExtensionTasksPerNode] = strconv.FormatInt(count, 10)
 	}
 	return jt
 }

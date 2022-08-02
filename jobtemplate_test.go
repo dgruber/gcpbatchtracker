@@ -3,13 +3,14 @@ package gcpbatchtracker_test
 import (
 	"time"
 
+	. "github.com/dgruber/gcpbatchtracker"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/dgruber/drmaa2interface"
-	. "github.com/dgruber/gcpbatchtracker"
 )
 
 var _ = Describe("Jobtemplate", func() {
@@ -21,7 +22,7 @@ var _ = Describe("Jobtemplate", func() {
 				RemoteCommand:     "echo",
 				Args:              []string{"hello", "world"},
 				JobCategory:       "ubuntu:18.04",
-				MinSlots:          1, // one machine
+				MaxSlots:          1, // one machine
 				CandidateMachines: []string{"e2-standard-4"},
 			}
 
@@ -42,7 +43,7 @@ var _ = Describe("Jobtemplate", func() {
 		It("should set NFS for dirs and files in containers", func() {
 			jt := drmaa2interface.JobTemplate{
 				JobCategory:       "ubuntu:18.04",
-				MinSlots:          1, // one machine
+				MaxSlots:          1, // one machine
 				CandidateMachines: []string{"e2-standard-4"},
 			}
 			jt.StageInFiles = map[string]string{
@@ -55,8 +56,10 @@ var _ = Describe("Jobtemplate", func() {
 			Expect(req.Job.TaskGroups[0].TaskSpec.Volumes[0].MountPath).To(Equal("/mnt/share/"))
 			cvolumes := req.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable.(*batchpb.Runnable_Container_).Container.Volumes
 			Expect(len(cvolumes)).To(Equal(int(5))) // there are 3 files mounted from host into container before
-			Expect(cvolumes[3]).To(Equal("/mnt/share/:/containermnt/share"))
-			Expect(cvolumes[4]).To(Equal("/mnt/share/file.sh:/home/user/file.sh"))
+			Expect(cvolumes[3]).To(Or(Equal("/mnt/share/:/containermnt/share"),
+				Equal("/mnt/share/file.sh:/home/user/file.sh")))
+			Expect(cvolumes[4]).To(Or(Equal("/mnt/share/:/containermnt/share"),
+				Equal("/mnt/share/file.sh:/home/user/file.sh")))
 		})
 
 	})
@@ -66,7 +69,7 @@ var _ = Describe("Jobtemplate", func() {
 		It("should set the cpu core count, boot disk size, and runtime limit", func() {
 			jt := drmaa2interface.JobTemplate{
 				JobCategory:       "ubuntu:18.04",
-				MinSlots:          1, // one machine
+				MaxSlots:          1, // one machine
 				CandidateMachines: []string{"e2-standard-4"},
 			}
 			jt.ResourceLimits = map[string]string{

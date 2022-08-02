@@ -43,6 +43,19 @@ var _ = Describe("JobtemplateExtensions", func() {
 			Expect(count).To(Equal(int64(1)))
 		})
 
+		It("should set tasks per node", func() {
+			jt := drmaa2interface.JobTemplate{}
+			defaultTasksPerNode, exists := GetTasksPerNodeExtension(jt)
+			Expect(exists).To(BeFalse())
+			Expect(defaultTasksPerNode).To(Equal(int64(1)))
+			jt = SetTasksPerNodeExtension(jt, 2)
+			Expect(jt.ExtensionList).To(HaveKey(ExtensionTasksPerNode))
+			Expect(jt.ExtensionList[ExtensionTasksPerNode]).To(Equal("2"))
+			count, exists := GetTasksPerNodeExtension(jt)
+			Expect(exists).To(BeTrue())
+			Expect(count).To(Equal(int64(2)))
+		})
+
 	})
 
 })

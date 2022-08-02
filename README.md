@@ -29,6 +29,8 @@ See examples directory which uses the interface directly.
 | JobName              | JobID |
 | MinSlots/MaxSlots (can't be different) | defines parallelism (always 1 task per node) |
 | AccountingID | Sets a tag "accounting" |
+| MinSlots | Specifies the parallelism (how many tasks to run in parallel)|
+| MaxSlots | Specifies the amount of tasks to run. For MPI set MinSlots = MaxSlots. |
 
 In case of a container following files are always mounted from host:
 
@@ -69,15 +71,18 @@ Terminating a job deletes it...
 
 ## File staging using the Job Template
 
-Currently only for container based jobs (JobCategory is a container image).
-Here NFS is supported (Google Filestore) for both files and directories.
+NFS (Google Filestore) and GCS is supported.
+
+For NFS in containers besides directories also files can be specified.
 In case of files, the directory is mounted to the host and from there the
-file inside the container as specified in key.
+file inside the container as specified in key. For the directory case
+a leading "/" is required.
 
 ````go
     StageInFiles: map[string]string{
             "/etc/script.sh": "nfs:10.20.30.40:/filestore/user/dir/script.sh",
             "/mnt/dir": "nfs:10.20.30.40:/filestore/user/dir/",
+            "/somedir": "gs://benchmarkfiles", // mount a bucket into container or host
         },
 ````
 

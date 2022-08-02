@@ -44,14 +44,16 @@ echo 'Prolog'
 `
 	}
 
+	tasksPerNode, _ := GetTasksPerNodeExtension(jt)
+
 	jobRequest.Job = &batchpb.Job{
 		Priority: int64(jt.Priority),
 		TaskGroups: []*batchpb.TaskGroup{
 			{
 				Name:             "default",
 				TaskCount:        int64(jt.MaxSlots),
-				Parallelism:      int64(jt.MaxSlots),
-				TaskCountPerNode: int64(1),
+				Parallelism:      int64(jt.MinSlots),
+				TaskCountPerNode: tasksPerNode,
 				// sets $BATCH_HOSTS_FILE
 				RequireHostsFile: true,
 				// what is with containers?
@@ -264,6 +266,29 @@ echo 'Prolog'
 	// stage in files
 
 	for destination, source := range jt.StageInFiles {
+		if strings.HasPrefix(source, "gs://") {
+
+			jobRequest.Job.TaskGroups[0].TaskSpec.Volumes = append(
+				jobRequest.Job.TaskGroups[0].TaskSpec.Volumes,
+				&batchpb.Volume{
+					Source: &batchpb.Volume_Gcs{
+						Gcs: &batchpb.GCS{
+							RemotePath: strings.TrimPrefix(source, "gs://"),
+						},
+					},
+					MountPath: destination,
+				},
+			)
+
+			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
+				Runnables[3].Executable.(*batchpb.Runnable_Container_); isContainer {
+				// job runs in container
+				// mount from host into container
+				container.Container.Volumes = append(container.Container.Volumes,
+					fmt.Sprintf("%s:%s", destination, destination))
+			}
+		}
+
 		if strings.HasPrefix(source, "nfs:") {
 			nfs := strings.Split(source, ":")
 			if len(nfs) != 3 {
@@ -272,19 +297,21 @@ echo 'Prolog'
 			// if remote path is file then we need to mount the directory
 			// to the host and from there the file to the container
 
+			// expect path ends always with / !
+			dir, file := filepath.Split(nfs[2])
+
 			// single files can be mounted inside the container since
 			// we first mount the directory to the host
 			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
 				Runnables[3].Executable.(*batchpb.Runnable_Container_); isContainer {
-				// expect path ends always with / !
-				dir, file := filepath.Split(nfs[2])
 
 				// check if dir is already mounted
 				if hasNFSVolume(jobRequest.Job.TaskGroups[0].TaskSpec.Volumes, nfs[1], dir) {
 					// already mounted
 				} else {
-					jobRequest.Job.TaskGroups[0].TaskSpec.Volumes = []*batchpb.Volume{
-						{
+					jobRequest.Job.TaskGroups[0].TaskSpec.Volumes = append(
+						jobRequest.Job.TaskGroups[0].TaskSpec.Volumes,
+						&batchpb.Volume{
 							Source: &batchpb.Volume_Nfs{
 								Nfs: &batchpb.NFS{
 									Server:     nfs[1],
@@ -293,11 +320,25 @@ echo 'Prolog'
 							},
 							MountPath: "/mnt" + dir,
 						},
-					}
+					)
 				}
 				// mount from host into container
 				container.Container.Volumes = append(container.Container.Volumes,
 					fmt.Sprintf("/mnt%s%s:%s", dir, file, destination))
+			} else {
+				// not running in a container
+				jobRequest.Job.TaskGroups[0].TaskSpec.Volumes = append(
+					jobRequest.Job.TaskGroups[0].TaskSpec.Volumes,
+					&batchpb.Volume{
+						Source: &batchpb.Volume_Nfs{
+							Nfs: &batchpb.NFS{
+								Server:     nfs[1],
+								RemotePath: dir,
+							},
+						},
+						MountPath: "/mnt" + dir,
+					},
+				)
 			}
 		}
 	}
@@ -317,11 +358,11 @@ func hasNFSVolume(volumes []*batchpb.Volume, server, path string) bool {
 }
 
 func ValidateJobTemplate(jt drmaa2interface.JobTemplate) (drmaa2interface.JobTemplate, error) {
-	if jt.MinSlots == 0 {
-		return jt, fmt.Errorf("MinSlots is 0")
-	}
 	if jt.MaxSlots == 0 {
-		jt.MinSlots = jt.MaxSlots
+		return jt, fmt.Errorf("MaxSlots is 0")
+	}
+	if jt.MinSlots == 0 {
+		jt.MinSlots = 1
 	}
 	if jt.MinSlots > jt.MaxSlots {
 		return jt, fmt.Errorf("MinSlots > MaxSlots")
