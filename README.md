@@ -27,7 +27,6 @@ See examples directory which uses the interface directly.
 | CandidateMachines[0] | Machine type or when prefixed with "template:" it uses an instance template with that name    |
 | JobCategory          | Container image or $script$ or $scriptpath$ for other runnables which interpretes then RemoteCommand as script or script path |
 | JobName              | JobID |
-| MinSlots/MaxSlots (can't be different) | defines parallelism (always 1 task per node) |
 | AccountingID | Sets a tag "accounting" |
 | MinSlots | Specifies the parallelism (how many tasks to run in parallel)|
 | MaxSlots | Specifies the amount of tasks to run. For MPI set MinSlots = MaxSlots. |
@@ -46,6 +45,15 @@ For a container the following runtime options are set:
 
 Default output path is cloud logging. If "OutputPath" is set it is changed to
 LogsPolicy_PATH with the OutputPath as destination.
+
+### JobTemplate Extensions
+
+| DRMAA2 JobTemplate Extension Key | DRMAA2 JobTemplate Extension Value      |
+| :-------------------------------:|:---------------------------------------:|
+| ExtensionProlog / "prolog"       | String which contains prolog script executed on machine level |
+| ExtensionSpot / "spot"          |  "true"/"t"/... when machine should be spot |
+| ExctensionAccelerators / "accelerators"  | Accelerator name for machine |
+| ExtensionTasksPerNode / "tasks_per_node" | Amount of tasks per node |
 
 ## JobInfo Fields
 

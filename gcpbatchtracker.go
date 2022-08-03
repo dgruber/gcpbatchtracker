@@ -8,17 +8,11 @@ import (
 
 	batch "cloud.google.com/go/batch/apiv1"
 	"github.com/dgruber/drmaa2interface"
-	"github.com/dgruber/drmaa2os"
 	"github.com/dgruber/drmaa2os/pkg/helper"
 	"github.com/dgruber/drmaa2os/pkg/jobtracker"
 	"google.golang.org/api/iterator"
 	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 )
-
-// init registers the GoogleBatch tracker at the SessionManager
-func init() {
-	drmaa2os.RegisterJobTracker(drmaa2os.GoogleBatchSession, NewAllocator())
-}
 
 // GCPBatchTracker implements the JobTracker interface so that it can be
 // used as backend in drmaa2os project.
@@ -58,6 +52,12 @@ func (t *GCPBatchTracker) ListJobs() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		// filter for jobsession, if job session is "" then all jobs are returned
+		if t.drmaa2session != "" {
+			if job.Labels["drmaa2session"] != t.drmaa2session {
+				continue
+			}
+		}
 		jobs = append(jobs, job.Name)
 	}
 	return jobs, nil
@@ -66,6 +66,7 @@ func (t *GCPBatchTracker) ListJobs() ([]string, error) {
 // ListArrayJobs returns all job IDs an job array ID (or array job ID)
 // represents or an error.
 func (t *GCPBatchTracker) ListArrayJobs(arrayjobID string) ([]string, error) {
+	// TODO implement real job arrays
 	return helper.ArrayJobID2GUIDs(arrayjobID)
 }
 
@@ -73,7 +74,7 @@ func (t *GCPBatchTracker) ListArrayJobs(arrayjobID string) ([]string, error) {
 // returns the unique job ID or an error if job submission (or starting of
 // the job in case there is no queueing system) has failed.
 func (t *GCPBatchTracker) AddJob(jt drmaa2interface.JobTemplate) (string, error) {
-	req, err := ConvertJobTemplateToJobRequest(t.project, t.location, jt)
+	req, err := ConvertJobTemplateToJobRequest(t.drmaa2session, t.project, t.location, jt)
 	if err != nil {
 		return "", err
 	}
@@ -108,6 +109,11 @@ func (t *GCPBatchTracker) JobState(jobID string) (drmaa2interface.JobState, stri
 	if err != nil {
 		return drmaa2interface.Undetermined, "", err
 	}
+	if t.drmaa2session != "" {
+		if job.Labels["drmaa2session"] != t.drmaa2session {
+			return drmaa2interface.Undetermined, "", errors.New("job not found in job session")
+		}
+	}
 	return ConvertJobState(job)
 }
 
@@ -118,6 +124,9 @@ func (t *GCPBatchTracker) JobInfo(jobID string) (drmaa2interface.JobInfo, error)
 	})
 	if err != nil {
 		return drmaa2interface.JobInfo{}, err
+	}
+	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+		return drmaa2interface.JobInfo{}, errors.New("job not found in job session")
 	}
 	return BatchJobToJobInfo(job)
 }
@@ -142,6 +151,9 @@ func (t *GCPBatchTracker) JobControl(jobID string, action string) error {
 	case jobtracker.JobControlTerminate:
 		// TODO: that reaps the job and should be DeleteJob()
 		// any Google Batch equivalent?
+		if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+			return errors.New("job not found in job session")
+		}
 		_, err := t.client.DeleteJob(context.Background(), &batchpb.DeleteJobRequest{
 			Name:   jobID,
 			Reason: "job terminated by user",
@@ -156,6 +168,9 @@ func (t *GCPBatchTracker) JobControl(jobID string, action string) error {
 // error occured (like job was not found). In case of a timeout also an
 // error must be returned.
 func (t *GCPBatchTracker) Wait(jobID string, timeout time.Duration, state ...drmaa2interface.JobState) error {
+	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+		return errors.New("job not found in job session")
+	}
 	return helper.WaitForState(t, jobID, timeout, state...)
 }
 
@@ -166,6 +181,9 @@ func (t *GCPBatchTracker) Wait(jobID string, timeout time.Duration, state ...drm
 // job nil should be returned.
 func (t *GCPBatchTracker) DeleteJob(jobID string) error {
 	// here it does not need to be in an end state
+	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+		return errors.New("job not found in job session")
+	}
 	_, err := t.client.DeleteJob(context.Background(), &batchpb.DeleteJobRequest{
 		Name:   jobID,
 		Reason: "job deleted by user",
@@ -180,4 +198,18 @@ func (t *GCPBatchTracker) DeleteJob(jobID string) error {
 func (t *GCPBatchTracker) ListJobCategories() ([]string, error) {
 	// list available container images?
 	return []string{}, nil
+}
+
+func IsInDRMAA2Session(client *batch.Client, session string, jobID string) bool {
+	job, err := client.GetJob(context.Background(), &batchpb.GetJobRequest{
+		Name: jobID,
+	})
+	if err != nil {
+		return false
+	}
+	return IsInJobSession(session, job)
+}
+
+func IsInJobSession(session string, job *batchpb.Job) bool {
+	return job.Labels["drmaa2session"] == session
 }

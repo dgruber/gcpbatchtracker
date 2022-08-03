@@ -26,7 +26,7 @@ var _ = Describe("Jobtemplate", func() {
 				CandidateMachines: []string{"e2-standard-4"},
 			}
 
-			jobRequest, err := ConvertJobTemplateToJobRequest("", "", jt)
+			jobRequest, err := ConvertJobTemplateToJobRequest("session", "", "", jt)
 			Expect(err).To(BeNil())
 
 			container := (jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable).(*batchpb.Runnable_Container_)
@@ -35,6 +35,7 @@ var _ = Describe("Jobtemplate", func() {
 			Expect(container.Container.Entrypoint).To(Equal("echo"))
 			Expect(container.Container.Commands).To(Equal([]string{"hello", "world"}))
 			Expect(container.Container.Options).To(Equal("--network=host"))
+			Expect(jobRequest.Job.Labels["drmaa2session"]).To(Equal("session"))
 		})
 	})
 
@@ -50,7 +51,7 @@ var _ = Describe("Jobtemplate", func() {
 				"/containermnt/share": "nfs:myserver:/share/", // path needs to end with / !!!
 				"/home/user/file.sh":  "nfs:myserver:/share/file.sh",
 			}
-			req, err := ConvertJobTemplateToJobRequest("project", "location", jt)
+			req, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
 			Expect(err).To(BeNil())
 			Expect(len(req.Job.TaskGroups[0].TaskSpec.Volumes)).To(Equal(int(1)))
 			Expect(req.Job.TaskGroups[0].TaskSpec.Volumes[0].MountPath).To(Equal("/mnt/share/"))
@@ -77,7 +78,7 @@ var _ = Describe("Jobtemplate", func() {
 				"bootdiskmib": "10240", // 10 GB
 				"runtime":     "1h",    // 1 hour
 			}
-			req, err := ConvertJobTemplateToJobRequest("project", "location", jt)
+			req, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
 			Expect(err).To(BeNil())
 			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.CpuMilli).To(Equal(int64(4000)))
 			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.BootDiskMib).To(Equal(int64(10240)))

@@ -23,7 +23,7 @@ const (
 
 // https://cloud.google.com/go/docs/reference/cloud.google.com/go/batch/latest/apiv1#example-usage
 
-func ConvertJobTemplateToJobRequest(project, location string, jt drmaa2interface.JobTemplate) (batchpb.CreateJobRequest, error) {
+func ConvertJobTemplateToJobRequest(session, project, location string, jt drmaa2interface.JobTemplate) (batchpb.CreateJobRequest, error) {
 	var jobRequest batchpb.CreateJobRequest
 
 	jt, err := ValidateJobTemplate(jt)
@@ -124,8 +124,9 @@ echo 'Prolog'
 		},
 		// job labels
 		Labels: map[string]string{
-			"origin":     "go-drmaa2",
-			"accounting": jt.AccountingID,
+			"origin":        "go-drmaa2",
+			"accounting":    jt.AccountingID,
+			"drmaa2session": session,
 		},
 		// default logging is cloud logging
 		LogsPolicy: &batchpb.LogsPolicy{
@@ -287,9 +288,7 @@ echo 'Prolog'
 				container.Container.Volumes = append(container.Container.Volumes,
 					fmt.Sprintf("%s:%s", destination, destination))
 			}
-		}
-
-		if strings.HasPrefix(source, "nfs:") {
+		} else if strings.HasPrefix(source, "nfs:") {
 			nfs := strings.Split(source, ":")
 			if len(nfs) != 3 {
 				return jobRequest, fmt.Errorf("invalid NFS source (nfs:server:remotepath): %s", source)
@@ -340,6 +339,8 @@ echo 'Prolog'
 					},
 				)
 			}
+		} else if strings.HasPrefix(source, "b64data:") {
+			// first copy data to a bucket and then mount it?
 		}
 	}
 
