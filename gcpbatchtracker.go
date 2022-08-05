@@ -42,6 +42,10 @@ func NewGCPBatchTracker(drmaa2session string, project, location string) (*GCPBat
 
 // ListJobs returns all visible job IDs or an error.
 func (t *GCPBatchTracker) ListJobs() ([]string, error) {
+	return listJobs(t, true)
+}
+
+func listJobs(t *GCPBatchTracker, useJobSessionFilter bool) ([]string, error) {
 	jobs := make([]string, 0)
 	iter := t.client.ListJobs(context.Background(), nil)
 	for {
@@ -53,7 +57,7 @@ func (t *GCPBatchTracker) ListJobs() ([]string, error) {
 			return nil, err
 		}
 		// filter for jobsession, if job session is "" then all jobs are returned
-		if t.drmaa2session != "" {
+		if useJobSessionFilter && t.drmaa2session != "" {
 			if job.Labels["drmaa2session"] != t.drmaa2session {
 				continue
 			}
