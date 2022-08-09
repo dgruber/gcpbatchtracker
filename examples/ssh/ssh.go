@@ -9,7 +9,7 @@ import (
 	_ "embed"
 
 	"github.com/dgruber/drmaa2interface"
-	gcpbatchtracker "github.com/dgruber/gcpbatchtrackertracker"
+	gcpbatchtracker "github.com/dgruber/gcpbatchtracker"
 )
 
 var (

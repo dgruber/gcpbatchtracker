@@ -6,19 +6,23 @@ replace github.com/dgruber/gcpbatchtrackertracker => ../../
 
 require (
 	github.com/dgruber/drmaa2interface v1.0.2
-	github.com/dgruber/gcpbatchtrackertracker v0.0.0-00010101000000-000000000000
+	github.com/dgruber/gcpbatchtracker v0.0.0-20220805063248-7ca9880dc641
 )
 
 require (
 	cloud.google.com/go v0.102.0 // indirect
 	cloud.google.com/go/batch v0.1.0 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
-	github.com/dgruber/drmaa2os v0.3.21 // indirect
+	code.cloudfoundry.org/lager v2.0.0+incompatible // indirect
+	github.com/dgruber/drmaa2os v0.3.22-0.20220729104336-9770b6a1c08f // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.0.0-20220520183353-fd19c99a87aa // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb // indirect
