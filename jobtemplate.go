@@ -44,6 +44,8 @@ echo 'Prolog'
 `
 	}
 
+	epilog, _ := GetMachineEpilogExtension(jt)
+
 	tasksPerNode, _ := GetTasksPerNodeExtension(jt)
 
 	jobRequest.Job = &batchpb.Job{
@@ -134,6 +136,23 @@ echo 'Prolog'
 		},
 	}
 
+	// if epilog is set, add it to the job
+	if epilog != "" {
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables = append(jobRequest.Job.TaskGroups[0].TaskSpec.Runnables,
+			&batchpb.Runnable{
+				IgnoreExitStatus: false,
+				Background:       false,
+				AlwaysRun:        false,
+				Executable: &batchpb.Runnable_Script_{
+					Script: &batchpb.Runnable_Script{
+						Command: &batchpb.Runnable_Script_Text{
+							Text: epilog,
+						},
+					},
+				},
+			})
+	}
+
 	// apply resource limits
 	if jt.ResourceLimits != nil {
 		rt, exists := jt.ResourceLimits["runtime"]
@@ -203,8 +222,18 @@ echo 'Prolog'
 					"/root/.ssh:/root/.ssh",
 					//"/etc/hosts:/etc/hosts",
 				},
-				Options: "--network=host",
+				Options: "--network=host --ipc=host --pid=host --privileged --uts=host",
 			},
+		}
+	}
+
+	dockerOptionsExtension, exists := GetDockerOptionsExtension(jt)
+	if exists {
+		// override docker extensions
+		if _, ok := jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable.(*batchpb.Runnable_Container_); ok {
+			jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable.(*batchpb.Runnable_Container_).Container.Options = dockerOptionsExtension
+		} else {
+			return jobRequest, fmt.Errorf("docker option extensions set but no container image set")
 		}
 	}
 

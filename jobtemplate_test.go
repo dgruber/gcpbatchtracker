@@ -3,6 +3,7 @@ package gcpbatchtracker_test
 import (
 	"time"
 
+	"github.com/dgruber/gcpbatchtracker"
 	. "github.com/dgruber/gcpbatchtracker"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,7 +35,7 @@ var _ = Describe("Jobtemplate", func() {
 			Expect(container.Container.ImageUri).To(Equal("ubuntu:18.04"))
 			Expect(container.Container.Entrypoint).To(Equal("echo"))
 			Expect(container.Container.Commands).To(Equal([]string{"hello", "world"}))
-			Expect(container.Container.Options).To(Equal("--network=host"))
+			Expect(container.Container.Options).To(Equal("--network=host --ipc=host --pid=host --privileged --uts=host"))
 			Expect(jobRequest.Job.Labels["drmaa2session"]).To(Equal("session"))
 		})
 	})
@@ -83,6 +84,28 @@ var _ = Describe("Jobtemplate", func() {
 			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.CpuMilli).To(Equal(int64(4000)))
 			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.BootDiskMib).To(Equal(int64(10240)))
 			Expect(req.Job.TaskGroups[0].TaskSpec.MaxRunDuration).To(Equal(durationpb.New(time.Hour)))
+		})
+
+	})
+
+	Context("Extensions", func() {
+
+		It("should set docker options extesions", func() {
+			jt := drmaa2interface.JobTemplate{
+				JobCategory:       "ubuntu:18.04",
+				MaxSlots:          1, // one machine
+				CandidateMachines: []string{"e2-standard-4"},
+				Extension: drmaa2interface.Extension{
+					ExtensionList: map[string]string{
+						gcpbatchtracker.ExtensionDockerOptions: "--network=host",
+					},
+				},
+			}
+
+			req, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
+			Expect(err).To(BeNil())
+			options := req.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable.(*batchpb.Runnable_Container_).Container.Options
+			Expect(options).To(Equal("--network=host"))
 		})
 
 	})

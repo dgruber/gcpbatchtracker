@@ -12,14 +12,20 @@ var _ = Describe("JobtemplateExtensions", func() {
 
 	Context("Set and get extensions with helper functions", func() {
 
-		It("should set a machine level prolog", func() {
+		It("should set a machine level prolog/epilog", func() {
 			jt := drmaa2interface.JobTemplate{}
 			jt = SetMachinePrologExtension(jt, "#!/bin/bash")
+			jt = SetMachineEpilogExtension(jt, "#!/bin/sh")
 			Expect(jt.ExtensionList).To(HaveKey(ExtensionProlog))
 			Expect(jt.ExtensionList[ExtensionProlog]).To(Equal("#!/bin/bash"))
+			Expect(jt.ExtensionList).To(HaveKey(ExtensionEpilog))
+			Expect(jt.ExtensionList[ExtensionEpilog]).To(Equal("#!/bin/sh"))
 			prolog, exists := GetMachinePrologExtension(jt)
 			Expect(exists).To(BeTrue())
 			Expect(prolog).To(Equal("#!/bin/bash"))
+			epilog, exists := GetMachineEpilogExtension(jt)
+			Expect(exists).To(BeTrue())
+			Expect(epilog).To(Equal("#!/bin/sh"))
 		})
 
 		It("should set a spot instance request", func() {
@@ -54,6 +60,16 @@ var _ = Describe("JobtemplateExtensions", func() {
 			count, exists := GetTasksPerNodeExtension(jt)
 			Expect(exists).To(BeTrue())
 			Expect(count).To(Equal(int64(2)))
+		})
+
+		It("should set docker options extensions", func() {
+			jt := drmaa2interface.JobTemplate{}
+			jt = SetDockerOptionsExtension(jt, "--rm")
+			Expect(jt.ExtensionList).To(HaveKey(ExtensionDockerOptions))
+			Expect(jt.ExtensionList[ExtensionDockerOptions]).To(Equal("--rm"))
+			docker, exists := GetDockerOptionsExtension(jt)
+			Expect(exists).To(BeTrue())
+			Expect(docker).To(Equal("--rm"))
 		})
 
 	})

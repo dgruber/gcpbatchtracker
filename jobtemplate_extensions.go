@@ -9,9 +9,11 @@ import (
 
 const (
 	ExtensionProlog        = "prolog"
+	ExtensionEpilog        = "epilog"
 	ExtensionSpot          = "spot"
 	ExctensionAccelerators = "accelerators"
 	ExtensionTasksPerNode  = "tasks_per_node"
+	ExtensionDockerOptions = "docker_options"
 )
 
 func GetMachinePrologExtension(jt drmaa2interface.JobTemplate) (string, bool) {
@@ -27,6 +29,22 @@ func SetMachinePrologExtension(jt drmaa2interface.JobTemplate, prolog string) dr
 		jt.ExtensionList = make(map[string]string)
 	}
 	jt.ExtensionList[ExtensionProlog] = prolog
+	return jt
+}
+
+func GetMachineEpilogExtension(jt drmaa2interface.JobTemplate) (string, bool) {
+	if jt.ExtensionList == nil {
+		return "", false
+	}
+	extension, hasExtensions := jt.ExtensionList[ExtensionEpilog]
+	return extension, hasExtensions
+}
+
+func SetMachineEpilogExtension(jt drmaa2interface.JobTemplate, epilog string) drmaa2interface.JobTemplate {
+	if jt.ExtensionList == nil {
+		jt.ExtensionList = make(map[string]string)
+	}
+	jt.ExtensionList[ExtensionEpilog] = epilog
 	return jt
 }
 
@@ -101,5 +119,21 @@ func SetTasksPerNodeExtension(jt drmaa2interface.JobTemplate, count int64) drmaa
 		}
 		jt.ExtensionList[ExtensionTasksPerNode] = strconv.FormatInt(count, 10)
 	}
+	return jt
+}
+
+func GetDockerOptionsExtension(jt drmaa2interface.JobTemplate) (string, bool) {
+	if jt.ExtensionList == nil {
+		return "", false
+	}
+	extension, hasExtensions := jt.ExtensionList[ExtensionDockerOptions]
+	return extension, hasExtensions
+}
+
+func SetDockerOptionsExtension(jt drmaa2interface.JobTemplate, dockerOptions string) drmaa2interface.JobTemplate {
+	if jt.ExtensionList == nil {
+		jt.ExtensionList = make(map[string]string)
+	}
+	jt.ExtensionList[ExtensionDockerOptions] = dockerOptions
 	return jt
 }
