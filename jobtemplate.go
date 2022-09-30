@@ -51,6 +51,13 @@ echo 'Prolog'
 
 	tasksPerNode, _ := GetTasksPerNodeExtension(jt)
 
+	barries := true
+	// barrier seem to be only allowed for parallel jobs:
+	// "Barriers require task_count = parallelism"
+	if jt.MaxSlots != jt.MinSlots {
+		barries = false
+	}
+
 	jobRequest.Job = &batchpb.Job{
 		Priority: int64(jt.Priority),
 		TaskGroups: []*batchpb.TaskGroup{
@@ -71,42 +78,7 @@ echo 'Prolog'
 						MemoryMib:   jt.MinPhysMemory,
 					},
 					//MaxRunDuration: ,
-					Runnables: []*batchpb.Runnable{
-						{
-							IgnoreExitStatus: false,
-							Background:       false,
-							Executable: &batchpb.Runnable_Barrier_{
-								Barrier: &batchpb.Runnable_Barrier{
-									Name: "barrier",
-								},
-							},
-						},
-						{
-							IgnoreExitStatus: false,
-							Background:       false,
-							Executable: &batchpb.Runnable_Script_{
-								Script: &batchpb.Runnable_Script{
-									Command: &batchpb.Runnable_Script_Text{
-										Text: prolog,
-									},
-								},
-							},
-						},
-						{
-							IgnoreExitStatus: false,
-							Background:       false,
-							Executable: &batchpb.Runnable_Barrier_{
-								Barrier: &batchpb.Runnable_Barrier{
-									Name: "barrier2",
-								},
-							},
-						},
-						{
-							IgnoreExitStatus: false,
-							Background:       false,
-							// Executable: set below
-						},
-					},
+					Runnables: CreateRunnables(barries, prolog),
 				},
 			},
 		},
@@ -141,11 +113,25 @@ echo 'Prolog'
 
 	// if epilog is set, add it to the job
 	if epilog != "" {
+		if barries {
+			jobRequest.Job.TaskGroups[0].TaskSpec.Runnables = append(
+				jobRequest.Job.TaskGroups[0].TaskSpec.Runnables,
+				&batchpb.Runnable{
+					IgnoreExitStatus: true,
+					Background:       false,
+					Executable: &batchpb.Runnable_Barrier_{
+						Barrier: &batchpb.Runnable_Barrier{
+							Name: "after_job_barrier",
+						},
+					},
+				},
+			)
+		}
 		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables = append(jobRequest.Job.TaskGroups[0].TaskSpec.Runnables,
 			&batchpb.Runnable{
 				IgnoreExitStatus: false,
 				Background:       false,
-				AlwaysRun:        false,
+				AlwaysRun:        true,
 				Executable: &batchpb.Runnable_Script_{
 					Script: &batchpb.Runnable_Script{
 						Command: &batchpb.Runnable_Script_Text{
@@ -397,6 +383,52 @@ func hasNFSVolume(volumes []*batchpb.Volume, server, path string) bool {
 		}
 	}
 	return false
+}
+
+func CreateRunnables(barriers bool, prolog string) []*batchpb.Runnable {
+	var runnable []*batchpb.Runnable
+	if barriers {
+		runnable = append(runnable, &batchpb.Runnable{
+			IgnoreExitStatus: false,
+			Background:       false,
+			Executable: &batchpb.Runnable_Barrier_{
+				Barrier: &batchpb.Runnable_Barrier{
+					Name: "before_job_barrier",
+				},
+			},
+		})
+	}
+	runnable = append(runnable, &batchpb.Runnable{
+		IgnoreExitStatus: false,
+		Background:       false,
+		Executable: &batchpb.Runnable_Script_{
+			Script: &batchpb.Runnable_Script{
+				Command: &batchpb.Runnable_Script_Text{
+					Text: prolog,
+				},
+			},
+		},
+	})
+
+	if barriers {
+		runnable = append(runnable, &batchpb.Runnable{
+			IgnoreExitStatus: false,
+			Background:       false,
+			Executable: &batchpb.Runnable_Barrier_{
+				Barrier: &batchpb.Runnable_Barrier{
+					Name: "after_prolog_barrier",
+				},
+			},
+		})
+	}
+
+	runnable = append(runnable, &batchpb.Runnable{
+		IgnoreExitStatus: false,
+		Background:       false,
+		// Executable: set below
+	})
+
+	return runnable
 }
 
 func ValidateJobTemplate(jt drmaa2interface.JobTemplate) (drmaa2interface.JobTemplate, error) {
