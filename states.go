@@ -24,5 +24,6 @@ func ConvertJobState(job *batchpb.Job) (drmaa2interface.JobState, string, error)
 	case batchpb.JobStatus_DELETION_IN_PROGRESS:
 		return drmaa2interface.Running, batchpb.JobStatus_State_name[int32(batchpb.JobStatus_DELETION_IN_PROGRESS)], nil
 	}
+	fmt.Printf("internal error: unknown state (please report): %s", batchpb.JobStatus_State_name[int32(job.Status.State)])
 	return drmaa2interface.Undetermined, fmt.Sprintf("unknown state: %v", job.Status.State), nil
 }

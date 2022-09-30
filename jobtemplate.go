@@ -95,8 +95,9 @@ echo 'Prolog'
 				AllowedLocations: []string{},
 			},
 			Labels: map[string]string{
-				"origin":     "go-drmaa2",
-				"accounting": jt.AccountingID,
+				"origin":        "go-drmaa2",
+				"accounting":    jt.AccountingID,
+				"drmaa2session": session,
 			},
 		},
 		// job labels
@@ -179,9 +180,14 @@ echo 'Prolog'
 	}
 
 	// set executable
+	execPosition := 3
+	if !barries {
+		execPosition = 1
+	}
+
 	switch jt.JobCategory {
 	case JobCategoryScriptPath:
-		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable = &batchpb.Runnable_Script_{
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Script_{
 			Script: &batchpb.Runnable_Script{
 				Command: &batchpb.Runnable_Script_Path{
 					Path: jt.RemoteCommand,
@@ -189,7 +195,7 @@ echo 'Prolog'
 			},
 		}
 	case JobCategoryScript:
-		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable = &batchpb.Runnable_Script_{
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Script_{
 			Script: &batchpb.Runnable_Script{
 				Command: &batchpb.Runnable_Script_Text{
 					Text: jt.RemoteCommand,
@@ -198,7 +204,7 @@ echo 'Prolog'
 		}
 	default:
 		// is container image
-		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable = &batchpb.Runnable_Container_{
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Container_{
 			Container: &batchpb.Runnable_Container{
 				ImageUri:   jt.JobCategory,
 				Username:   "",
@@ -219,8 +225,8 @@ echo 'Prolog'
 	dockerOptionsExtension, exists := GetDockerOptionsExtension(jt)
 	if exists {
 		// override docker extensions
-		if _, ok := jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable.(*batchpb.Runnable_Container_); ok {
-			jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[3].Executable.(*batchpb.Runnable_Container_).Container.Options = dockerOptionsExtension
+		if _, ok := jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); ok {
+			jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable.(*batchpb.Runnable_Container_).Container.Options = dockerOptionsExtension
 		} else {
 			return jobRequest, fmt.Errorf("docker option extensions set but no container image set")
 		}
@@ -300,7 +306,7 @@ echo 'Prolog'
 			)
 
 			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
-				Runnables[3].Executable.(*batchpb.Runnable_Container_); isContainer {
+				Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); isContainer {
 				// job runs in container
 				// mount from host into container
 				container.Container.Volumes = append(container.Container.Volumes,
@@ -309,7 +315,7 @@ echo 'Prolog'
 		} else if strings.HasPrefix(source, "locahost:") {
 			// only valid in container mode; mounts from host into container
 			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
-				Runnables[3].Executable.(*batchpb.Runnable_Container_); isContainer {
+				Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); isContainer {
 				container.Container.Volumes = append(container.Container.Volumes,
 					fmt.Sprintf("%s:%s", source, destination))
 			} else {
@@ -329,7 +335,7 @@ echo 'Prolog'
 			// single files can be mounted inside the container since
 			// we first mount the directory to the host
 			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
-				Runnables[3].Executable.(*batchpb.Runnable_Container_); isContainer {
+				Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); isContainer {
 
 				// check if dir is already mounted
 				if hasNFSVolume(jobRequest.Job.TaskGroups[0].TaskSpec.Volumes, nfs[1], dir) {

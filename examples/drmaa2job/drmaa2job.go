@@ -11,7 +11,7 @@ import (
 func main() {
 	sm, err := drmaa2os.NewGoogleBatchSessionManager(
 		gcpbatchtracker.GoogleBatchTrackerParams{
-			GoogleProjectID: "myproject",
+			GoogleProjectID: "yourgoogleprojectid",
 			Region:          "us-central1",
 		},
 		"jobsession.db",
@@ -34,7 +34,7 @@ func main() {
 		JobCategory:       gcpbatchtracker.JobCategoryScript,
 		CandidateMachines: []string{"e2-standard-4"},
 		MinSlots:          1,
-		MaxSlots:          1,
+		MaxSlots:          2,
 		ResourceLimits: map[string]string{
 			"cpumilli": "4000",
 			"runtime":  "3m",
@@ -52,6 +52,7 @@ echo "hello from prolog"
 		panic(err)
 	}
 	fmt.Printf("JobID: %s\n", job.GetID())
+	fmt.Printf("Job state: %s\n", job.GetState())
 	fmt.Printf("Waiting for job %s to start\n", job.GetID())
 	startedJob, err := js.WaitAnyStarted([]drmaa2interface.Job{job},
 		drmaa2interface.InfiniteTime)

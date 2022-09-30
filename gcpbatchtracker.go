@@ -129,7 +129,7 @@ func (t *GCPBatchTracker) JobInfo(jobID string) (drmaa2interface.JobInfo, error)
 	if err != nil {
 		return drmaa2interface.JobInfo{}, err
 	}
-	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, t.drmaa2session, jobID) {
 		return drmaa2interface.JobInfo{}, errors.New("job not found in job session")
 	}
 	return BatchJobToJobInfo(job)
@@ -155,7 +155,7 @@ func (t *GCPBatchTracker) JobControl(jobID string, action string) error {
 	case jobtracker.JobControlTerminate:
 		// TODO: that reaps the job and should be DeleteJob()
 		// any Google Batch equivalent?
-		if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+		if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, t.drmaa2session, jobID) {
 			return errors.New("job not found in job session")
 		}
 		_, err := t.client.DeleteJob(context.Background(), &batchpb.DeleteJobRequest{
@@ -172,7 +172,7 @@ func (t *GCPBatchTracker) JobControl(jobID string, action string) error {
 // error occured (like job was not found). In case of a timeout also an
 // error must be returned.
 func (t *GCPBatchTracker) Wait(jobID string, timeout time.Duration, state ...drmaa2interface.JobState) error {
-	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
+	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, t.drmaa2session, jobID) {
 		return errors.New("job not found in job session")
 	}
 	return helper.WaitForState(t, jobID, timeout, state...)
@@ -185,8 +185,8 @@ func (t *GCPBatchTracker) Wait(jobID string, timeout time.Duration, state ...drm
 // job nil should be returned.
 func (t *GCPBatchTracker) DeleteJob(jobID string) error {
 	// here it does not need to be in an end state
-	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, jobID, t.drmaa2session) {
-		return errors.New("job not found in job session")
+	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, t.drmaa2session, jobID) {
+		return fmt.Errorf("job not found in job session %s", t.drmaa2session)
 	}
 	_, err := t.client.DeleteJob(context.Background(), &batchpb.DeleteJobRequest{
 		Name:   jobID,
@@ -205,10 +205,13 @@ func (t *GCPBatchTracker) ListJobCategories() ([]string, error) {
 }
 
 func IsInDRMAA2Session(client *batch.Client, session string, jobID string) bool {
+	// job ID might be long or short
+	//name := strings.Split(jobID, "/")[len(strings.Split(jobID, "/"))-1]
 	job, err := client.GetJob(context.Background(), &batchpb.GetJobRequest{
 		Name: jobID,
 	})
 	if err != nil {
+		fmt.Printf("get job error: %v", err)
 		return false
 	}
 	return IsInJobSession(session, job)
