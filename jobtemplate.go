@@ -3,6 +3,7 @@ package gcpbatchtracker
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,7 +35,9 @@ func ConvertJobTemplateToJobRequest(session, project, location string, jt drmaa2
 	jobRequest.Parent = "projects/" + project + "/locations/" + location
 	jobRequest.JobId = jt.JobName
 	if jobRequest.JobId == "" {
-		jobRequest.JobId = fmt.Sprintf("drmaa2-job-%d", time.Now().Unix())
+		rand.Seed(time.Now().UnixNano())
+		jobRequest.JobId = fmt.Sprintf("drmaa2-%d-%d",
+			time.Now().Unix(), rand.Int()%10000)
 	}
 
 	prolog, _ := GetMachinePrologExtension(jt)
@@ -316,6 +319,15 @@ echo 'Prolog'
 				// mount from host into container
 				container.Container.Volumes = append(container.Container.Volumes,
 					fmt.Sprintf("%s:%s", destination, destination))
+			}
+		} else if strings.HasPrefix(source, "locahost:") {
+			// only valid in container mode; mounts from host into container
+			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
+				Runnables[3].Executable.(*batchpb.Runnable_Container_); isContainer {
+				container.Container.Volumes = append(container.Container.Volumes,
+					fmt.Sprintf("%s:%s", source, destination))
+			} else {
+				return jobRequest, fmt.Errorf("localhost: only valid when container is used")
 			}
 		} else if strings.HasPrefix(source, "nfs:") {
 			nfs := strings.Split(source, ":")

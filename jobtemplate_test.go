@@ -110,4 +110,22 @@ var _ = Describe("Jobtemplate", func() {
 
 	})
 
+	Context("Regressions", func() {
+
+		It("should not generate the same job id if non is provided", func() {
+			jt := drmaa2interface.JobTemplate{
+				JobCategory:       "ubuntu:18.04",
+				MaxSlots:          1, // one machine
+				CandidateMachines: []string{"e2-standard-4"},
+			}
+
+			req1, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
+			Expect(err).To(BeNil())
+			req2, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
+			Expect(err).To(BeNil())
+			Expect(req1.JobId).ToNot(Equal(req2.JobId))
+		})
+
+	})
+
 })
