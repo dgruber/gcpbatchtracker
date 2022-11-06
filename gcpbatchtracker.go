@@ -82,6 +82,10 @@ func (t *GCPBatchTracker) AddJob(jt drmaa2interface.JobTemplate) (string, error)
 	if err != nil {
 		return "", err
 	}
+	// do some init: in case the stage out bucket does not exist, create it
+	if err := CreateMissingStageOutBuckets(t.project, jt.StageOutFiles); err != nil {
+		return "", fmt.Errorf("could not create stage out buckets: %v", err)
+	}
 	job, err := t.client.CreateJob(context.Background(), &req)
 	if err != nil {
 		return "", err

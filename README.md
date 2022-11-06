@@ -31,6 +31,8 @@ See examples directory which uses the interface directly.
 | MinSlots | Specifies the parallelism (how many tasks to run in parallel)|
 | MaxSlots | Specifies the amount of tasks to run. For MPI set MinSlots = MaxSlots. |
 
+For _StaginInFiles_ and _StageOutFiles_ see below.
+
 In case of a container following files are always mounted from host:
 
 ````go
@@ -95,6 +97,10 @@ a leading "/" is required.
             "/somedir": "gs://benchmarkfiles", // mount a bucket into container or host
         },
 ````
+
+_StageOutFiles_ creates a bucket if it does not exist before the job is submitted.
+If that failes then the job submission call fails. Currently only _gs://_ is evaluated
+in the StageOutFiles map.
 
 ## Examples
 

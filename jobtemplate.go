@@ -292,26 +292,7 @@ echo 'Prolog'
 
 	for destination, source := range jt.StageInFiles {
 		if strings.HasPrefix(source, "gs://") {
-
-			jobRequest.Job.TaskGroups[0].TaskSpec.Volumes = append(
-				jobRequest.Job.TaskGroups[0].TaskSpec.Volumes,
-				&batchpb.Volume{
-					Source: &batchpb.Volume_Gcs{
-						Gcs: &batchpb.GCS{
-							RemotePath: strings.TrimPrefix(source, "gs://"),
-						},
-					},
-					MountPath: destination,
-				},
-			)
-
-			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
-				Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); isContainer {
-				// job runs in container
-				// mount from host into container
-				container.Container.Volumes = append(container.Container.Volumes,
-					fmt.Sprintf("%s:%s", destination, destination))
-			}
+			jobRequest = *MountBucket(&jobRequest, execPosition, destination, source)
 		} else if strings.HasPrefix(source, "locahost:") {
 			// only valid in container mode; mounts from host into container
 			if container, isContainer := jobRequest.Job.TaskGroups[0].TaskSpec.
@@ -374,6 +355,20 @@ echo 'Prolog'
 			}
 		} else if strings.HasPrefix(source, "b64data:") {
 			// first copy data to a bucket and then mount it?
+		}
+	}
+
+	// stage out files (same as stage in files, but in case of bucket
+	// we need to try to create the bucket first if it does not exist)
+	for destination, source := range jt.StageOutFiles {
+		if strings.HasPrefix(source, "gs://") {
+			for _, bucket := range jt.StageInFiles {
+				if bucket == source {
+					// bucket already mounted from stage in
+					continue
+				}
+			}
+			jobRequest = *MountBucket(&jobRequest, execPosition, destination, source)
 		}
 	}
 
