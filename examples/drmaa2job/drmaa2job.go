@@ -8,6 +8,8 @@ import (
 	"github.com/dgruber/gcpbatchtracker"
 )
 
+// gcloud auth application-default login
+
 func main() {
 	sm, err := drmaa2os.NewGoogleBatchSessionManager(
 		gcpbatchtracker.GoogleBatchTrackerParams{

@@ -22,7 +22,7 @@ func main() {
 		fmt.Printf("could not get job session: %v\n", err)
 		os.Exit(1)
 	}
-	job, err := js.RunJob(drmaa2interface.JobTemplate{
+	jt := drmaa2interface.JobTemplate{
 		RemoteCommand:     "/bin/bash",
 		Args:              []string{"-c", jobScript},
 		JobCategory:       "biocontainers/blast:2.2.31",
@@ -46,7 +46,15 @@ func main() {
 				gcpbatchtracker.ExtensionSpot: "true",
 			},
 		},
-	})
+	}
+	out, err := jt.MarshalJSON()
+	if err != nil {
+		fmt.Printf("could not marshal job template: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("%s\n", out)
+	os.Exit(0)
+	job, err := js.RunJob(jt)
 	if err != nil {
 		panic(err)
 	}
