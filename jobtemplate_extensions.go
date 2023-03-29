@@ -11,7 +11,7 @@ const (
 	ExtensionProlog        = "prolog"
 	ExtensionEpilog        = "epilog"
 	ExtensionSpot          = "spot"
-	ExctensionAccelerators = "accelerators"
+	ExtensionAccelerators  = "accelerators"
 	ExtensionTasksPerNode  = "tasks_per_node"
 	ExtensionDockerOptions = "docker_options"
 )
@@ -78,7 +78,7 @@ func GetAcceleratorsExtension(jt drmaa2interface.JobTemplate) (string, int64, bo
 	if jt.ExtensionList == nil {
 		return "", 0, false
 	}
-	extension, hasExtensions := jt.ExtensionList[ExctensionAccelerators]
+	extension, hasExtensions := jt.ExtensionList[ExtensionAccelerators]
 	if hasExtensions {
 		a := strings.Split(extension, "*")
 		if len(a) >= 2 {
@@ -95,7 +95,7 @@ func SetAcceleratorsExtension(jt drmaa2interface.JobTemplate, count int64, accel
 		if jt.ExtensionList == nil {
 			jt.ExtensionList = make(map[string]string)
 		}
-		jt.ExtensionList[ExctensionAccelerators] = strconv.FormatInt(count, 10) + "*" + accelerator
+		jt.ExtensionList[ExtensionAccelerators] = strconv.FormatInt(count, 10) + "*" + accelerator
 	}
 	return jt
 }

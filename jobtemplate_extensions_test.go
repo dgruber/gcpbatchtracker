@@ -41,8 +41,8 @@ var _ = Describe("JobtemplateExtensions", func() {
 		It("should set the accelerators request", func() {
 			jt := drmaa2interface.JobTemplate{}
 			jt = SetAcceleratorsExtension(jt, 1, "nvidia-tesla-k80")
-			Expect(jt.ExtensionList).To(HaveKey(ExctensionAccelerators))
-			Expect(jt.ExtensionList[ExctensionAccelerators]).To(Equal("1*nvidia-tesla-k80"))
+			Expect(jt.ExtensionList).To(HaveKey(ExtensionAccelerators))
+			Expect(jt.ExtensionList[ExtensionAccelerators]).To(Equal("1*nvidia-tesla-k80"))
 			accelerators, count, exists := GetAcceleratorsExtension(jt)
 			Expect(exists).To(BeTrue())
 			Expect(accelerators).To(Equal("nvidia-tesla-k80"))
