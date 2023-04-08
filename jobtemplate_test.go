@@ -110,6 +110,42 @@ var _ = Describe("Jobtemplate", func() {
 
 	})
 
+	Describe("JobTemplateToEnv", func() {
+
+		It("should encode a JobTemplate to a base64 string", func() {
+			jt := drmaa2interface.JobTemplate{
+				RemoteCommand: "test",
+				Args:          []string{"arg1", "arg2"},
+			}
+			encodedJT, err := JobTemplateToEnv(jt)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(encodedJT).ToNot(BeEmpty())
+		})
+
+	})
+
+	Describe("GetJobTemplateFromEnv", func() {
+
+		It("should decode a base64 string to a JobTemplate", func() {
+			jt := drmaa2interface.JobTemplate{
+				RemoteCommand: "test",
+				Args:          []string{"arg1", "arg2"},
+			}
+			encodedJT, err := JobTemplateToEnv(jt)
+			Expect(err).NotTo(HaveOccurred())
+
+			decodedJT, err := GetJobTemplateFromBase64(encodedJT)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(decodedJT).To(Equal(jt))
+		})
+
+		It("should return an error for an invalid base64 string", func() {
+			_, err := GetJobTemplateFromBase64("invalid base64 string")
+			Expect(err).To(HaveOccurred())
+		})
+
+	})
+
 	Context("Regressions", func() {
 
 		It("should not generate the same job id if non is provided", func() {

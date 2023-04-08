@@ -3,6 +3,7 @@ package gcpbatchtracker
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -56,4 +57,27 @@ func MountBucket(jobRequest *batchpb.CreateJobRequest, execPosition int, destina
 			fmt.Sprintf("%s:%s", destination, destination))
 	}
 	return jobRequest
+}
+
+// ReadFromBucket reads the content of an object from a bucket.
+// This is a convenience function to read files, like output files
+// from a bucket.
+func ReadFromBucket(source string, file string) ([]byte, error) {
+	if !strings.HasPrefix(source, "gs://") {
+		return nil, fmt.Errorf("source %s is not a GCS bucket", source)
+	}
+	bucket := strings.Split(strings.TrimPrefix(source, "gs://"), "/")[0]
+	storageClient, err := GetStorageClient()
+	if err != nil {
+		return nil, fmt.Errorf("could not create storage client: %v", err)
+	}
+	bucketHandle := storageClient.Bucket(bucket)
+	obj := bucketHandle.Object(file)
+	reader, err := obj.NewReader(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("could not read object %s from bucket %s: %v",
+			file, bucket, err)
+	}
+	defer reader.Close()
+	return ioutil.ReadAll(reader)
 }

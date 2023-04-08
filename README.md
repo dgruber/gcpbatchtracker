@@ -102,6 +102,12 @@ _StageOutFiles_ creates a bucket if it does not exist before the job is submitte
 If that failes then the job submission call fails. Currently only _gs://_ is evaluated
 in the StageOutFiles map.
 
+````go
+    StageOutFiles: map[string]string{
+            "gs://outputbucket": "/tmp/joboutput",
+        },
+````
+
 ## Examples
 
 See examples directory.

@@ -1,6 +1,9 @@
 package gcpbatchtracker
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -10,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dgruber/drmaa2interface"
+	"github.com/mitchellh/copystructure"
 	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
@@ -20,6 +24,8 @@ const (
 	// job categories (otherwise it is a container image)
 	JobCategoryScriptPath = "$scriptpath$" // treats RemoteCommand as path to script and ignores args
 	JobCategoryScript     = "$script$"     // treats RemoteCommand as script and ignores args
+	// Env variable name container job template
+	EnvJobTemplate = "DRMAA2_JOB_TEMPLATE"
 )
 
 // https://cloud.google.com/go/docs/reference/cloud.google.com/go/batch/latest/apiv1#example-usage
@@ -58,6 +64,22 @@ echo 'Prolog'
 		barries = false
 	}
 
+	// set job template as environment variable, so that
+	// we can access it later; unfortunately, we cannot
+	// store it as a label as labels are limited to 63
+	// characters.
+	env, err := JobTemplateToEnv(jt)
+
+	if jt.JobEnvironment == nil {
+		jt.JobEnvironment = make(map[string]string)
+	}
+	jobEnvironment, err := copystructure.Copy(jt.JobEnvironment)
+	if err != nil {
+		return jobRequest,
+			fmt.Errorf("failed to copy job environment: %s", err)
+	}
+	jobEnvironment.(map[string]string)[EnvJobTemplate] = env
+
 	jobRequest.Job = &batchpb.Job{
 		Priority: int64(jt.Priority),
 		TaskGroups: []*batchpb.TaskGroup{
@@ -71,7 +93,9 @@ echo 'Prolog'
 				// what is with containers?
 				PermissiveSsh: true,
 				TaskSpec: &batchpb.TaskSpec{
-					Environments: jt.JobEnvironment,
+					Environment: &batchpb.Environment{
+						Variables: jobEnvironment.(map[string]string),
+					},
 					ComputeResource: &batchpb.ComputeResource{
 						CpuMilli:    defaultCPUMilli,
 						BootDiskMib: defaultBootDiskMib,
@@ -452,6 +476,56 @@ func ValidateJobTemplate(jt drmaa2interface.JobTemplate) (drmaa2interface.JobTem
 		if jt.ErrorPath != jt.OutputPath {
 			return jt, fmt.Errorf("ErrorPath and OutputPath must be the same or one unset")
 		}
+	}
+	return jt, nil
+}
+
+// Implements JobTemplater interface
+
+func (t *GCPBatchTracker) JobTemplate(jobID string) (drmaa2interface.JobTemplate, error) {
+	// get job template from env variables
+	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
+		Name: jobID,
+	})
+	if err != nil {
+		return drmaa2interface.JobTemplate{},
+			fmt.Errorf("could not get job %s: %v", jobID, err)
+	}
+
+	for _, group := range job.GetTaskGroups() {
+		for _, envs := range group.GetTaskEnvironments() {
+			value, exists := envs.GetVariables()[EnvJobTemplate]
+			if exists {
+				jt, err := GetJobTemplateFromBase64(value)
+				if err != nil {
+					continue
+				}
+				return jt, nil
+			}
+		}
+	}
+
+	return drmaa2interface.JobTemplate{},
+		fmt.Errorf("could not find job template in env variables")
+}
+
+func JobTemplateToEnv(jt drmaa2interface.JobTemplate) (string, error) {
+	jtBytes, err := json.Marshal(jt)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal job template: %v", err)
+	}
+	return base64.StdEncoding.EncodeToString(jtBytes), nil
+}
+
+func GetJobTemplateFromBase64(base64encondedJT string) (drmaa2interface.JobTemplate, error) {
+	jt := drmaa2interface.JobTemplate{}
+	decodedJT, err := base64.StdEncoding.DecodeString(base64encondedJT)
+	if err != nil {
+		return jt, fmt.Errorf("could not decode job template: %v", err)
+	}
+	err = json.Unmarshal(decodedJT, &jt)
+	if err != nil {
+		return jt, fmt.Errorf("could not unmarshal job template: %v", err)
 	}
 	return jt, nil
 }

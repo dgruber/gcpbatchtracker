@@ -13,7 +13,7 @@ import (
 func main() {
 	sm, err := drmaa2os.NewGoogleBatchSessionManager(
 		gcpbatchtracker.GoogleBatchTrackerParams{
-			GoogleProjectID: "yourgoogleprojectid",
+			GoogleProjectID: "googleprojectid",
 			Region:          "us-central1",
 		},
 		"jobsession.db",
@@ -69,4 +69,15 @@ echo "hello from prolog"
 		panic(err)
 	}
 	fmt.Printf("Job %s terminated\n", termintedJob.GetID())
+
+	// Get job template
+	jt, err := job.GetJobTemplate()
+	if err != nil {
+		panic(err)
+	}
+	templateJSON, err := jt.MarshalJSON()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Job template: %s\n", string(templateJSON))
 }
