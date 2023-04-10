@@ -104,7 +104,7 @@ in the StageOutFiles map.
 
 ````go
     StageOutFiles: map[string]string{
-            "gs://outputbucket": "/tmp/joboutput",
+            "/tmp/joboutput": "gs://outputbucket",
         },
 ````
 
