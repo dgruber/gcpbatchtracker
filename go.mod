@@ -7,6 +7,7 @@ replace github.com/dgruber/drmaa2os => github.com/dgruber/drmaa2os v0.3.24
 require (
 	cloud.google.com/go/batch v0.7.0
 	github.com/dgruber/drmaa2interface v1.1.0
+	github.com/mitchellh/copystructure v1.2.0
 )
 
 require (
@@ -18,7 +19,6 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect

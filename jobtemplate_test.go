@@ -162,6 +162,18 @@ var _ = Describe("Jobtemplate", func() {
 			Expect(req1.JobId).ToNot(Equal(req2.JobId))
 		})
 
+		It("should use 1 as default for min slots and max slots if both not set", func() {
+			jt := drmaa2interface.JobTemplate{
+				JobCategory:       "ubuntu:18.04",
+				CandidateMachines: []string{"e2-standard-4"},
+			}
+
+			jt2, err := ValidateJobTemplate(jt)
+			Expect(err).To(BeNil())
+			Expect(jt2.MinSlots).To(Equal(int64(1)))
+			Expect(jt2.MaxSlots).To(Equal(int64(1)))
+		})
+
 	})
 
 })

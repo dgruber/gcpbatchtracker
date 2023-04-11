@@ -458,7 +458,7 @@ func CreateRunnables(barriers bool, prolog string) []*batchpb.Runnable {
 
 func ValidateJobTemplate(jt drmaa2interface.JobTemplate) (drmaa2interface.JobTemplate, error) {
 	if jt.MaxSlots == 0 {
-		return jt, fmt.Errorf("MaxSlots is 0")
+		jt.MaxSlots = 1
 	}
 	if jt.MinSlots == 0 {
 		jt.MinSlots = 1
