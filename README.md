@@ -59,7 +59,7 @@ LogsPolicy_PATH with the OutputPath as destination.
 | ExtensionProlog / "prolog"       | String which contains prolog script executed on machine level before the job starts |
 | ExtensionEpilog / "epilog"       | String which contains epilog script executed on machine level after the job ends successfully |
 | ExtensionSpot / "spot"          |  "true"/"t"/... when machine should be spot |
-| ExctensionAccelerators / "accelerators"  | "Amount*Accelerator name" for machine (like "1*nvidia-tesla-v100") |
+| ExctensionAccelerators / "accelerators"  | "Amount*Accelerator name" for machine (like "1\*nvidia-tesla-v100") |
 | ExtensionTasksPerNode / "tasks_per_node" | Amount of tasks per node |
 | ExtensionDockerOptions / "docker_options" | Override of docker run options in case a container image is used|
 
