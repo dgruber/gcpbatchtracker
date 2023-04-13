@@ -228,6 +228,16 @@ echo 'Prolog'
 		}
 	default:
 		// is container image
+
+		// in case of a GPU job we need to add the --gpus all option
+		additionalOption := ""
+		if t, count, exists := GetAcceleratorsExtension(jt); exists && count > 0 && strings.HasPrefix(t, "nvidia") {
+			additionalOption = " --gpus all --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia-uvm-tools"
+			for i := 0; i < int(count); i++ {
+				additionalOption += fmt.Sprintf(" --device /dev/nvidia%d", i)
+			}
+		}
+
 		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Container_{
 			Container: &batchpb.Runnable_Container{
 				ImageUri:   jt.JobCategory,
@@ -241,9 +251,10 @@ echo 'Prolog'
 					"/root/.ssh:/root/.ssh",
 					//"/etc/hosts:/etc/hosts",
 				},
-				Options: "--network=host --ipc=host --pid=host --privileged --uts=host",
+				Options: "--network=host --ipc=host --pid=host --privileged --uts=host" + additionalOption,
 			},
 		}
+
 	}
 
 	dockerOptionsExtension, exists := GetDockerOptionsExtension(jt)
@@ -289,7 +300,11 @@ echo 'Prolog'
 		}
 
 		var accelerators []*batchpb.AllocationPolicy_Accelerator
+		installGPUDriver := false
 		if t, count, exists := GetAcceleratorsExtension(jt); exists {
+			if strings.HasPrefix(t, "nvidia") {
+				installGPUDriver = true
+			}
 			accelerators = []*batchpb.AllocationPolicy_Accelerator{
 				{
 					Type:  t,
@@ -308,8 +323,10 @@ echo 'Prolog'
 						Accelerators:      accelerators,
 					},
 				},
+				InstallGpuDrivers: installGPUDriver,
 			},
 		}
+
 	}
 
 	// stage in files
