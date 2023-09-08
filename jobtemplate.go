@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	"github.com/dgruber/drmaa2interface"
 	"github.com/mitchellh/copystructure"
-	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -30,12 +30,12 @@ const (
 
 // https://cloud.google.com/go/docs/reference/cloud.google.com/go/batch/latest/apiv1#example-usage
 
-func ConvertJobTemplateToJobRequest(session, project, location string, jt drmaa2interface.JobTemplate) (batchpb.CreateJobRequest, error) {
+func ConvertJobTemplateToJobRequest(session, project, location string, jt drmaa2interface.JobTemplate) (*batchpb.CreateJobRequest, error) {
 	var jobRequest batchpb.CreateJobRequest
 
 	jt, err := ValidateJobTemplate(jt)
 	if err != nil {
-		return jobRequest, err
+		return nil, err
 	}
 
 	jobRequest.Parent = "projects/" + project + "/locations/" + location
@@ -75,10 +75,16 @@ echo 'Prolog'
 	}
 	jobEnvironment, err := copystructure.Copy(jt.JobEnvironment)
 	if err != nil {
-		return jobRequest,
+		return nil,
 			fmt.Errorf("failed to copy job environment: %s", err)
 	}
 	jobEnvironment.(map[string]string)[EnvJobTemplate] = env
+
+	// environment variables coming from google secret manager
+	secrets, exists := GetSecretEnvironmentVariables(jt)
+	if !exists {
+		secrets = nil
+	}
 
 	jobRequest.Job = &batchpb.Job{
 		Priority: int64(jt.Priority),
@@ -94,7 +100,8 @@ echo 'Prolog'
 				PermissiveSsh: true,
 				TaskSpec: &batchpb.TaskSpec{
 					Environment: &batchpb.Environment{
-						Variables: jobEnvironment.(map[string]string),
+						Variables:       jobEnvironment.(map[string]string),
+						SecretVariables: secrets,
 					},
 					ComputeResource: &batchpb.ComputeResource{
 						CpuMilli:    defaultCPUMilli,
@@ -263,7 +270,7 @@ echo 'Prolog'
 		if _, ok := jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); ok {
 			jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable.(*batchpb.Runnable_Container_).Container.Options = dockerOptionsExtension
 		} else {
-			return jobRequest, fmt.Errorf("docker option extensions set but no container image set")
+			return nil, fmt.Errorf("docker option extensions set but no container image set")
 		}
 	}
 
@@ -276,7 +283,7 @@ echo 'Prolog'
 
 	// CandiateMachines must be set
 	if len(jt.CandidateMachines) < 1 {
-		return jobRequest, fmt.Errorf("CandidateMachines must be set to the machine type or template:<instancetemplatename>")
+		return nil, fmt.Errorf("CandidateMachines must be set to the machine type or template:<instancetemplatename>")
 	}
 	if strings.HasPrefix(jt.CandidateMachines[0], "template:") {
 		jobRequest.Job.AllocationPolicy.Instances = []*batchpb.AllocationPolicy_InstancePolicyOrTemplate{
@@ -341,12 +348,12 @@ echo 'Prolog'
 				container.Container.Volumes = append(container.Container.Volumes,
 					fmt.Sprintf("%s:%s", source, destination))
 			} else {
-				return jobRequest, fmt.Errorf("localhost: only valid when container is used")
+				return nil, fmt.Errorf("localhost: only valid when container is used")
 			}
 		} else if strings.HasPrefix(source, "nfs:") {
 			nfs := strings.Split(source, ":")
 			if len(nfs) != 3 {
-				return jobRequest, fmt.Errorf("invalid NFS source (nfs:server:remotepath): %s", source)
+				return nil, fmt.Errorf("invalid NFS source (nfs:server:remotepath): %s", source)
 			}
 			// if remote path is file then we need to mount the directory
 			// to the host and from there the file to the container
@@ -413,7 +420,7 @@ echo 'Prolog'
 		}
 	}
 
-	return jobRequest, nil
+	return &jobRequest, nil
 }
 
 func hasNFSVolume(volumes []*batchpb.Volume, server, path string) bool {

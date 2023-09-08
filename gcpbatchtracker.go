@@ -7,11 +7,11 @@ import (
 	"time"
 
 	batch "cloud.google.com/go/batch/apiv1"
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	"github.com/dgruber/drmaa2interface"
 	"github.com/dgruber/drmaa2os/pkg/helper"
 	"github.com/dgruber/drmaa2os/pkg/jobtracker"
 	"google.golang.org/api/iterator"
-	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 )
 
 // GCPBatchTracker implements the JobTracker interface so that it can be
@@ -86,7 +86,7 @@ func (t *GCPBatchTracker) AddJob(jt drmaa2interface.JobTemplate) (string, error)
 	if err := CreateMissingStageOutBuckets(t.project, jt.StageOutFiles); err != nil {
 		return "", fmt.Errorf("could not create stage out buckets: %v", err)
 	}
-	job, err := t.client.CreateJob(context.Background(), &req)
+	job, err := t.client.CreateJob(context.Background(), req)
 	if err != nil {
 		return "", err
 	}

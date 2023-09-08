@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	"github.com/dgruber/drmaa2interface"
-	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 )
 
 // All methods required for the DRMAA2 MonitoringSession

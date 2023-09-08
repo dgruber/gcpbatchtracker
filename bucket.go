@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	"cloud.google.com/go/storage"
-	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 )
 
 func getStorageClient() (*storage.Client, error) {

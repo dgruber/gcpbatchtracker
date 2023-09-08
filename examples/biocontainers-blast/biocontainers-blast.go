@@ -14,9 +14,20 @@ import (
 //go:embed blast.sh
 var jobScript string
 
-// gcloud auth application-defaults login
+// gcloud auth application-default login
 
 func main() {
+
+	if os.Getenv("GOOGLE_PROJECT_ID") == "" {
+		fmt.Println("Please set the GOOGLE_PROJECT_ID environment variable")
+		os.Exit(1)
+	}
+
+	if os.Getenv("GOOGLE_BUCKET_NAME") == "" {
+		fmt.Println("Please set the GOOGLE_BUCKET_NAME environment variable")
+		fmt.Println("to the name of the bucket (without gs:// prefix) where the results should be stored")
+	}
+
 	js, err := GetJobSession("testsession")
 	if err != nil {
 		fmt.Printf("could not get job session: %v\n", err)
@@ -38,7 +49,7 @@ func main() {
 		// of a bucket it creates the bucket if it does not exist. For that
 		// of course you need to have the right permissions.
 		StageOutFiles: map[string]string{
-			"/host": "gs://" + os.Getenv("GOOGLE_BUCKET_NAME"), // Please modify this to your bucket
+			"/host": "gs://" + os.Getenv("GOOGLE_BUCKET_NAME"), // Please modify this to your bucket - just the name of the bucket
 		},
 		// save money by using spot instances
 		Extension: drmaa2interface.Extension{
@@ -47,13 +58,7 @@ func main() {
 			},
 		},
 	}
-	out, err := jt.MarshalJSON()
-	if err != nil {
-		fmt.Printf("could not marshal job template: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("%s\n", out)
-	os.Exit(0)
+
 	job, err := js.RunJob(jt)
 	if err != nil {
 		panic(err)

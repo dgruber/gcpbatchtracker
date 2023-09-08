@@ -3,8 +3,8 @@ package gcpbatchtracker
 import (
 	"fmt"
 
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	"github.com/dgruber/drmaa2interface"
-	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 )
 
 func ConvertJobState(job *batchpb.Job) (drmaa2interface.JobState, string, error) {

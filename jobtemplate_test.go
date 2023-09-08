@@ -6,9 +6,9 @@ import (
 	"github.com/dgruber/gcpbatchtracker"
 	. "github.com/dgruber/gcpbatchtracker"
 
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	batchpb "google.golang.org/genproto/googleapis/cloud/batch/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/dgruber/drmaa2interface"
@@ -108,6 +108,35 @@ var _ = Describe("Jobtemplate", func() {
 			Expect(options).To(Equal("--network=host"))
 		})
 
+		It("should set secret environment variables", func() {
+
+			jt := drmaa2interface.JobTemplate{
+				JobCategory:       "ubuntu:18.04",
+				MaxSlots:          1, // one machine
+				CandidateMachines: []string{"e2-standard-4"},
+				Extension: drmaa2interface.Extension{
+					ExtensionList: map[string]string{
+						gcpbatchtracker.ExtensionDockerOptions: "--network=host",
+					},
+				},
+			}
+
+			jt, err := SetSecretEnvironmentVariables(jt, map[string]string{
+				"MY_PASSWORD_FROM_GOOGLE_SECRETS":       "projects/ev/secrets/secret_message/versions/1",
+				"MY_OTHER_PASSWORD_FROM_GOOGLE_SECRETS": "projects/ev/secrets/other_secret/versions/1",
+			})
+			Expect(err).To(BeNil())
+
+			req, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
+			Expect(err).To(BeNil())
+			Expect(req.Job.TaskGroups[0].TaskSpec.Environment.SecretVariables).To(HaveLen(2))
+			Expect(req.Job.TaskGroups[0].TaskSpec.
+				Environment.SecretVariables["MY_PASSWORD_FROM_GOOGLE_SECRETS"]).
+				To(Equal("projects/ev/secrets/secret_message/versions/1"))
+			Expect(req.Job.TaskGroups[0].TaskSpec.
+				Environment.SecretVariables["MY_OTHER_PASSWORD_FROM_GOOGLE_SECRETS"]).
+				To(Equal("projects/ev/secrets/other_secret/versions/1"))
+		})
 	})
 
 	Describe("JobTemplateToEnv", func() {

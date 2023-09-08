@@ -31,7 +31,7 @@ See examples directory which uses the interface directly.
 | MinSlots | Specifies the parallelism (how many tasks to run in parallel)|
 | MaxSlots | Specifies the amount of tasks to run. For MPI set MinSlots = MaxSlots. |
 
-For _StaginInFiles_ and _StageOutFiles_ see below.
+For _StageInFiles_ and _StageOutFiles_ see below.
 
 In case of a container following files are always mounted from host:
 
@@ -58,6 +58,7 @@ LogsPolicy_PATH with the OutputPath as destination.
 | ExctensionAccelerators / "accelerators"  | Accelerator name for machine |
 | ExtensionTasksPerNode / "tasks_per_node" | Amount of tasks per node |
 | ExtensionDockerOptions / "docker_options" | Override of docker run options in case a container image is used|
+| ExtensionGoogleSecretEnv / "secret_env" | Used for populating env variables from Google Secret Manager. Please use SetSecretEnvironmentVariables() |  
 
 ## JobInfo Fields
 
@@ -80,6 +81,7 @@ Terminating a job deletes it...
 | Running                       | JobStatus_RUNNING JobStatus_DELETION_IN_PROGRESS |
 | Queued                        | JobStatus_QUEUED JobStatus_SCHEDULED             |
 | Undetermined                  | JobStatus_STATE_UNSPECIFIED                      |
+
 
 ## File staging using the Job Template
 

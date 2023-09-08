@@ -72,6 +72,23 @@ var _ = Describe("JobtemplateExtensions", func() {
 			Expect(docker).To(Equal("--rm"))
 		})
 
+		It("should set secret environment variables", func() {
+			jt := drmaa2interface.JobTemplate{}
+			jt, err := SetSecretEnvironmentVariables(jt, map[string]string{
+				"MY_PASSWORD_FROM_GOOGLE_SECRETS":       "projects/ev/secrets/secret_message/versions/1",
+				"MY_OTHER_PASSWORD_FROM_GOOGLE_SECRETS": "projects/ev/secrets/other_secret/versions/1",
+			})
+			Expect(err).To(BeNil())
+			Expect(jt.ExtensionList).To(HaveKey(ExtensionGoogleSecretEnv))
+			Expect(jt.ExtensionList[ExtensionGoogleSecretEnv]).NotTo(Equal(""))
+
+			value, exists := GetSecretEnvironmentVariables(jt)
+			Expect(exists).To(BeTrue())
+			Expect(len(value)).To(Equal(2))
+			Expect(value["MY_PASSWORD_FROM_GOOGLE_SECRETS"]).To(Equal("projects/ev/secrets/secret_message/versions/1"))
+			Expect(value["MY_OTHER_PASSWORD_FROM_GOOGLE_SECRETS"]).To(Equal("projects/ev/secrets/other_secret/versions/1"))
+		})
+
 	})
 
 })

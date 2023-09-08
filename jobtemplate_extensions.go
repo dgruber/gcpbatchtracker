@@ -1,19 +1,24 @@
 package gcpbatchtracker
 
 import (
+	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
+
+	"encoding/json"
 
 	"github.com/dgruber/drmaa2interface"
 )
 
 const (
-	ExtensionProlog        = "prolog"
-	ExtensionEpilog        = "epilog"
-	ExtensionSpot          = "spot"
-	ExtensionAccelerators  = "accelerators"
-	ExtensionTasksPerNode  = "tasks_per_node"
-	ExtensionDockerOptions = "docker_options"
+	ExtensionProlog          = "prolog"
+	ExtensionEpilog          = "epilog"
+	ExtensionSpot            = "spot"
+	ExtensionAccelerators    = "accelerators"
+	ExtensionTasksPerNode    = "tasks_per_node"
+	ExtensionDockerOptions   = "docker_options"
+	ExtensionGoogleSecretEnv = "secret_env"
 )
 
 func GetMachinePrologExtension(jt drmaa2interface.JobTemplate) (string, bool) {
@@ -136,4 +141,45 @@ func SetDockerOptionsExtension(jt drmaa2interface.JobTemplate, dockerOptions str
 	}
 	jt.ExtensionList[ExtensionDockerOptions] = dockerOptions
 	return jt
+}
+
+// SetSecretEnvironmentVariables sets environment variables which are
+// retrieved from Google Secret Manager as JobTemplate extenion.
+// The map key is the environment variable name and the value is the
+// path to the secret (like "projects/dev/secrets/secret_message/versions/1")
+func SetSecretEnvironmentVariables(jt drmaa2interface.JobTemplate, secretEnv map[string]string) (drmaa2interface.JobTemplate, error) {
+	if jt.ExtensionList == nil {
+		jt.ExtensionList = make(map[string]string)
+	}
+	// convert to JSON
+	encoded, err := json.Marshal(secretEnv)
+	if err != nil {
+		return jt, fmt.Errorf("could not encode secret environment variables: %v", err)
+	}
+	// base64 envoding for encoded
+	b64Secrets := base64.StdEncoding.EncodeToString(encoded)
+	jt.ExtensionList[ExtensionGoogleSecretEnv] = b64Secrets
+	return jt, nil
+}
+
+func GetSecretEnvironmentVariables(jt drmaa2interface.JobTemplate) (map[string]string, bool) {
+	if jt.ExtensionList == nil {
+		return nil, false
+	}
+	secretEnv, hasSecretEnv := jt.ExtensionList[ExtensionGoogleSecretEnv]
+	if !hasSecretEnv {
+		return nil, false
+	}
+	// decode base64
+	decoded, err := base64.StdEncoding.DecodeString(secretEnv)
+	if err != nil {
+		return nil, false
+	}
+	// convert from JSON
+	var secretEnvMap map[string]string
+	err = json.Unmarshal(decoded, &secretEnvMap)
+	if err != nil {
+		return nil, false
+	}
+	return secretEnvMap, true
 }
