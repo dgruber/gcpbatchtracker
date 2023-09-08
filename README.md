@@ -30,6 +30,10 @@ See examples directory which uses the interface directly.
 | AccountingID | Sets a tag "accounting" |
 | MinSlots | Specifies the parallelism (how many tasks to run in parallel)|
 | MaxSlots | Specifies the amount of tasks to run. For MPI set MinSlots = MaxSlots. |
+| MinPhysMemory | MB of memory to request; should be set to increase from default to full machine size|
+| ResourceLimits | key could be "cpumilli", "bootdiskmib", "runtime" -> runtime limit like "30m" for 30 minutes |
+
+Override resource limits "cpumilli" to get full amount of resources one running just one task per machine (like 8000 for 8 cores)!
 
 For _StageInFiles_ and _StageOutFiles_ see below.
 
@@ -55,7 +59,7 @@ LogsPolicy_PATH with the OutputPath as destination.
 | ExtensionProlog / "prolog"       | String which contains prolog script executed on machine level before the job starts |
 | ExtensionEpilog / "epilog"       | String which contains epilog script executed on machine level after the job ends successfully |
 | ExtensionSpot / "spot"          |  "true"/"t"/... when machine should be spot |
-| ExctensionAccelerators / "accelerators"  | Accelerator name for machine |
+| ExctensionAccelerators / "accelerators"  | "Amount*Accelerator name" for machine (like "1\*nvidia-tesla-v100") |
 | ExtensionTasksPerNode / "tasks_per_node" | Amount of tasks per node |
 | ExtensionDockerOptions / "docker_options" | Override of docker run options in case a container image is used|
 | ExtensionGoogleSecretEnv / "secret_env" | Used for populating env variables from Google Secret Manager. Please use SetSecretEnvironmentVariables() |  
