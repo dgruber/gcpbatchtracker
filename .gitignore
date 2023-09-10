@@ -1,3 +1,4 @@
+setenv.sh
 bucket_test.test_copy
 
 # Binaries for programs and plugins

@@ -47,7 +47,10 @@ func (t *GCPBatchTracker) ListJobs() ([]string, error) {
 
 func listJobs(t *GCPBatchTracker, useJobSessionFilter bool) ([]string, error) {
 	jobs := make([]string, 0)
-	iter := t.client.ListJobs(context.Background(), nil)
+	req := &batchpb.ListJobsRequest{
+		Parent: fmt.Sprintf("projects/%s/locations/%s", t.project, t.location),
+	}
+	iter := t.client.ListJobs(context.Background(), req)
 	for {
 		job, err := iter.Next()
 		if err == iterator.Done {
