@@ -26,6 +26,14 @@ type GCPBatchTracker struct {
 	drmaa2session string
 }
 
+// NewGCPBatchTracker returns a new GCPBatchTracker instance which is used
+// for managing jobs in Google Batch. The project and location parameters
+// define the Google Cloud project and the location (like "us-central1").
+// The drmaa2session parameter is optional and can be used to filter for
+// jobs which are in the same job session. If the job session is "" then
+// all jobs are made visible.
+// GCPBatchTracker implements the JobTracker interface so that it can be
+// used as backend in drmaa2os project and wfl.
 func NewGCPBatchTracker(drmaa2session string, project, location string) (*GCPBatchTracker, error) {
 	ctx := context.Background()
 	c, err := batch.NewClient(ctx)
@@ -45,6 +53,8 @@ func (t *GCPBatchTracker) ListJobs() ([]string, error) {
 	return listJobs(t, true)
 }
 
+// listJobs returns all visible job IDs or an error. If useJobSessionFilter
+// is true then only jobs which are in the same job session are returned.
 func listJobs(t *GCPBatchTracker, useJobSessionFilter bool) ([]string, error) {
 	jobs := make([]string, 0)
 	req := &batchpb.ListJobsRequest{
@@ -77,9 +87,14 @@ func (t *GCPBatchTracker) ListArrayJobs(arrayjobID string) ([]string, error) {
 	return helper.ArrayJobID2GUIDs(arrayjobID)
 }
 
-// AddJob typically submits or starts a new job at the backend. The function
-// returns the unique job ID or an error if job submission (or starting of
-// the job in case there is no queueing system) has failed.
+// AddJob creates a Google Batch job which is defined by the DRMAA2 job
+// template.
+// Job names must be unique in Google Batch hence it is automatically created
+// by the backend. The CandidateMachines field is used to define the machine
+// type (like "n2-standard-2") to be used. Exactly one machine type must be
+// specified. The ResourceLimits field is used to define the CPU and runtime
+// limits.
+// On success the job ID (job name) is returned.
 func (t *GCPBatchTracker) AddJob(jt drmaa2interface.JobTemplate) (string, error) {
 	req, err := ConvertJobTemplateToJobRequest(t.drmaa2session, t.project, t.location, jt)
 	if err != nil {
@@ -107,6 +122,10 @@ func (t *GCPBatchTracker) AddJob(jt drmaa2interface.JobTemplate) (string, error)
 // Note, that jobs use the TASK_ID environment variable to identifiy which
 // task they are and determine that way what to do (like which data set is
 // accessed).
+//
+// With Google Batch job arrays can be created by using MinSlots and MaxSlots
+// in AddJob(). MaxSlots defines the number of tasks in the job array. MinSlots
+// defines the number of tasks which are run in parallel (for MPI).
 func (t *GCPBatchTracker) AddArrayJob(jt drmaa2interface.JobTemplate, begin int, end int, step int, maxParallel int) (string, error) {
 	// TODO: translate to Google Batch instead using a simple wrapper
 	return helper.AddArrayJobAsSingleJobs(jt, t, begin, end, step)
@@ -206,6 +225,9 @@ func (t *GCPBatchTracker) DeleteJob(jobID string) error {
 // JobCategory field of the job template. The list is informational. An example
 // is returning a list of supported container images. AddJob() and AddArrayJob()
 // processes a JobTemplate and hence also the JobCategory field.
+//
+// JobCategories supported by Google Batch are all container images which can be
+// used by the service. Hence the list of job categories is empty.
 func (t *GCPBatchTracker) ListJobCategories() ([]string, error) {
 	// list available container images?
 	return []string{}, nil
