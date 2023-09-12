@@ -1,7 +1,6 @@
 package gcpbatchtracker
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -502,35 +501,6 @@ func ValidateJobTemplate(jt drmaa2interface.JobTemplate) (drmaa2interface.JobTem
 		}
 	}
 	return jt, nil
-}
-
-// Implements JobTemplater interface
-
-func (t *GCPBatchTracker) JobTemplate(jobID string) (drmaa2interface.JobTemplate, error) {
-	// get job template from env variables
-	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
-		Name: jobID,
-	})
-	if err != nil {
-		return drmaa2interface.JobTemplate{},
-			fmt.Errorf("could not get job %s: %v", jobID, err)
-	}
-
-	for _, group := range job.GetTaskGroups() {
-		for _, envs := range group.GetTaskEnvironments() {
-			value, exists := envs.GetVariables()[EnvJobTemplate]
-			if exists {
-				jt, err := GetJobTemplateFromBase64(value)
-				if err != nil {
-					continue
-				}
-				return jt, nil
-			}
-		}
-	}
-
-	return drmaa2interface.JobTemplate{},
-		fmt.Errorf("could not find job template in env variables")
 }
 
 func JobTemplateToEnv(jt drmaa2interface.JobTemplate) (string, error) {

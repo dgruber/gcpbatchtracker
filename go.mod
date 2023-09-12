@@ -6,6 +6,7 @@ replace github.com/dgruber/drmaa2os => github.com/dgruber/drmaa2os v0.3.24
 
 require (
 	cloud.google.com/go/batch v1.4.0
+	cloud.google.com/go/logging v1.7.0
 	github.com/dgruber/drmaa2interface v1.1.0
 	github.com/mitchellh/copystructure v1.2.0
 )
@@ -24,6 +25,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect

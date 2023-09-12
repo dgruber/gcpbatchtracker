@@ -91,4 +91,41 @@ var _ = Describe("GCP Batch tracker", func() {
 
 	})
 
+	Context("Jobtemplate", func() {
+
+		It("should get the job template from job env", func() {
+			if !credentialsCheck() {
+				Skip("Credentials not set")
+			}
+			t, err := NewGCPBatchTracker(
+				"testsession",
+				os.Getenv("GCPBATCHTRACKER_PROJECT"),
+				os.Getenv("GCPBATCHTRACKER_LOCATION")) // like "us-central1"
+			Expect(err).ToNot(HaveOccurred())
+
+			jobTemplate := drmaa2interface.JobTemplate{
+				RemoteCommand: "/bin/sleep",
+				CandidateMachines: []string{
+					"n2-standard-2",
+				},
+				Args:        []string{"0"},
+				JobCategory: "busybox",
+				JobEnvironment: map[string]string{
+					"TEST_ENV": "test",
+				},
+			}
+
+			jobID, err := t.AddJob(jobTemplate)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(jobID).ToNot(Equal(""))
+
+			jt, err := t.JobTemplate(jobID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(jt.JobEnvironment).NotTo(BeNil())
+			Expect(jt.JobEnvironment["TEST_ENV"]).To(Equal("test"))
+
+		})
+
+	})
+
 })

@@ -43,5 +43,5 @@ func (t *GCPBatchTracker) JobInfoFromMonitor(jobID string) (drmaa2interface.JobI
 	if err != nil {
 		return drmaa2interface.JobInfo{}, err
 	}
-	return BatchJobToJobInfo(job)
+	return BatchJobToJobInfo(t.project, job)
 }

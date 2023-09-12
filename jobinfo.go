@@ -9,7 +9,7 @@ import (
 	"github.com/dgruber/drmaa2interface"
 )
 
-func BatchJobToJobInfo(job *batchpb.Job) (drmaa2interface.JobInfo, error) {
+func BatchJobToJobInfo(project string, job *batchpb.Job) (drmaa2interface.JobInfo, error) {
 	if job == nil {
 		return drmaa2interface.JobInfo{}, errors.New("batch job is nil")
 	}
@@ -33,6 +33,16 @@ func BatchJobToJobInfo(job *batchpb.Job) (drmaa2interface.JobInfo, error) {
 	}
 
 	ji.State, ji.SubState, _ = ConvertJobState(job)
+
+	ji.ExtensionList = make(map[string]string)
+	ji.ExtensionList["uid"] = job.Uid
+
+	out, err := GetJobOutput(project, job.Uid)
+	if err != nil {
+		// skip output
+	} else {
+		ji.ExtensionList["output"] = strings.Join(out, "\n")
+	}
 
 	return ji, nil
 }
