@@ -2,6 +2,7 @@ package gcpbatchtracker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/dgruber/drmaa2interface"
 	"github.com/dgruber/drmaa2os/pkg/helper"
 	"github.com/dgruber/drmaa2os/pkg/jobtracker"
+	"github.com/patrickmn/go-cache"
 	"google.golang.org/api/iterator"
 )
 
@@ -24,6 +26,8 @@ type GCPBatchTracker struct {
 	location string
 	// job session name
 	drmaa2session string
+	// cache for job info
+	jcache *cache.Cache
 }
 
 // NewGCPBatchTracker returns a new GCPBatchTracker instance which is used
@@ -45,6 +49,7 @@ func NewGCPBatchTracker(drmaa2session string, project, location string) (*GCPBat
 		project:       project,
 		location:      location,
 		drmaa2session: drmaa2session,
+		jcache:        cache.New(10*time.Second, 1*time.Minute),
 	}, nil
 }
 
@@ -76,6 +81,17 @@ func listJobs(t *GCPBatchTracker, useJobSessionFilter bool) ([]string, error) {
 			}
 		}
 		jobs = append(jobs, job.Name)
+
+		// cache job info
+		ji, err := BatchJobToJobInfo(t.project, job)
+		if err != nil {
+			continue
+		}
+		jiJSON, err := json.Marshal(ji)
+		if err != nil {
+			continue
+		}
+		t.jcache.Set(job.Name, jiJSON, cache.DefaultExpiration)
 	}
 	return jobs, nil
 }
@@ -149,6 +165,15 @@ func (t *GCPBatchTracker) JobState(jobID string) (drmaa2interface.JobState, stri
 
 // JobInfo returns the job status of a job in form of a JobInfo struct or an error.
 func (t *GCPBatchTracker) JobInfo(jobID string) (drmaa2interface.JobInfo, error) {
+
+	if ji, found := t.jcache.Get(jobID); found {
+		var jobInfo drmaa2interface.JobInfo
+		if err := json.Unmarshal(ji.([]byte), &jobInfo); err != nil {
+			fmt.Printf("could not unmarshal job info: %v", err)
+		}
+		return jobInfo, nil
+	}
+
 	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
 		Name: jobID,
 	})
