@@ -44,6 +44,7 @@ func (t *GCPBatchTracker) JobInfoFromMonitor(jobID string) (drmaa2interface.JobI
 		var jobInfo drmaa2interface.JobInfo
 		if err := json.Unmarshal(ji.([]byte), &jobInfo); err != nil {
 			fmt.Printf("could not unmarshal job info: %v", err)
+			return drmaa2interface.JobInfo{}, err
 		}
 		return jobInfo, nil
 	}
