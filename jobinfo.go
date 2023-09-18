@@ -37,12 +37,15 @@ func BatchJobToJobInfo(project string, job *batchpb.Job) (drmaa2interface.JobInf
 	ji.ExtensionList = make(map[string]string)
 	ji.ExtensionList["uid"] = job.Uid
 
-	out, err := GetJobOutput(project, job.Uid)
-	if err != nil {
-		// skip output
-	} else {
-		ji.ExtensionList["output"] = strings.Join(out, "\n")
-	}
+	// too slow
+	/*
+		out, err := GetJobOutput(project, job.Uid)
+		if err != nil {
+			// skip output
+		} else {
+			ji.ExtensionList["output"] = strings.Join(out, "\n")
+		}
+	*/
 
 	return ji, nil
 }

@@ -158,6 +158,7 @@ func (t *GCPBatchTracker) JobInfo(jobID string) (drmaa2interface.JobInfo, error)
 	if t.drmaa2session != "" && !IsInDRMAA2Session(t.client, t.drmaa2session, jobID) {
 		return drmaa2interface.JobInfo{}, errors.New("job not found in job session")
 	}
+
 	return BatchJobToJobInfo(t.project, job)
 }
 

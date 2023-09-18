@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"cloud.google.com/go/batch/apiv1/batchpb"
 	"cloud.google.com/go/logging/logadmin"
 	"google.golang.org/api/iterator"
 )
@@ -41,4 +42,14 @@ func GetJobOutput(projectID, jobUid string) ([]string, error) {
 	}
 
 	return lines, nil
+}
+
+func (t *GCPBatchTracker) JobOutput(jobID string) ([]string, error) {
+	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
+		Name: jobID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return GetJobOutput(t.project, job.Uid)
 }
