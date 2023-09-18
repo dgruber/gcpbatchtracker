@@ -2,6 +2,7 @@ package gcpbatchtracker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"cloud.google.com/go/batch/apiv1/batchpb"
@@ -37,6 +38,16 @@ func (t *GCPBatchTracker) CloseMonitoringSession(name string) error {
 // JobInfoFromMonitor might collect job state and job info in a
 // different way as a JobSession with persistent storage does
 func (t *GCPBatchTracker) JobInfoFromMonitor(jobID string) (drmaa2interface.JobInfo, error) {
+
+	// cached by ListJobs()
+	if ji, found := t.jcache.Get(jobID); found {
+		var jobInfo drmaa2interface.JobInfo
+		if err := json.Unmarshal(ji.([]byte), &jobInfo); err != nil {
+			fmt.Printf("could not unmarshal job info: %v", err)
+		}
+		return jobInfo, nil
+	}
+
 	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
 		Name: jobID,
 	})
