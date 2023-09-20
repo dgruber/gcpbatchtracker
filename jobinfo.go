@@ -46,6 +46,18 @@ func BatchJobToJobInfo(project string, job *batchpb.Job) (drmaa2interface.JobInf
 			ji.ExtensionList["output"] = strings.Join(out, "\n")
 		}
 	*/
+	machineType := "unknown"
+
+	instances := job.AllocationPolicy.GetInstances()
+	if len(instances) > 0 && instances[0].GetPolicy() != nil {
+		machineType = instances[0].GetPolicy().MachineType
+		ji.ExtensionList["min_cpu_platform"] =
+			instances[0].GetPolicy().MinCpuPlatform
+		ji.ExtensionList["boot_disk"] =
+			instances[0].GetPolicy().BootDisk.String()
+		// accelerators / disks / ...
+	}
+	ji.AllocatedMachines = []string{machineType}
 
 	return ji, nil
 }

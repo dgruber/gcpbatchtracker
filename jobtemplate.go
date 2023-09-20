@@ -27,6 +27,24 @@ const (
 	EnvJobTemplate = "DRMAA2_JOB_TEMPLATE"
 )
 
+const (
+	// ResourceLimitRuntime is the key for the ResourceLimits
+	// map which defines the maximum runtime of a job. The
+	// value is a string which can be parsed by time.ParseDuration.
+	// Like "1m30s" for 1 minute 30 seconds.
+	ResourceLimitRuntime = "runtime"
+	// ResourceLimitBootDisk is the key for the ResourceLimits
+	// map which defines the boot disk size of a job. The
+	// value is a string which can be parsed by strconv.ParseInt
+	// with base 10. The unit is MiB.
+	ResourceLimitBootDisk = "bootdiskmib"
+	// ResourceLimitCPUMilli is the key for the ResourceLimits
+	// map which defines the CPU milli of a job. The
+	// value is a string which can be parsed by strconv.ParseInt
+	// with base 10. The unit is milli cores. Like 8000 for 8 cores.
+	ResourceLimitCPUMilli = "cpumilli"
+)
+
 // https://cloud.google.com/go/docs/reference/cloud.google.com/go/batch/latest/apiv1#example-usage
 
 func ConvertJobTemplateToJobRequest(session, project, location string, jt drmaa2interface.JobTemplate) (*batchpb.CreateJobRequest, error) {
@@ -103,7 +121,7 @@ echo 'Prolog'
 						SecretVariables: secrets,
 					},
 					ComputeResource: &batchpb.ComputeResource{
-						CpuMilli:    defaultCPUMilli,
+						CpuMilli:    DefaultCPUMilli(jt.CandidateMachines[0]),
 						BootDiskMib: defaultBootDiskMib,
 						MemoryMib:   jt.MinPhysMemory,
 					},
@@ -175,7 +193,7 @@ echo 'Prolog'
 
 	// apply resource limits
 	if jt.ResourceLimits != nil {
-		rt, exists := jt.ResourceLimits["runtime"]
+		rt, exists := jt.ResourceLimits[ResourceLimitRuntime]
 		if exists {
 			if maxRunDuration, err := time.ParseDuration(rt); err != nil {
 				log.Printf("Invalid max run duration: %s (%v)", rt, err)
@@ -183,7 +201,7 @@ echo 'Prolog'
 				jobRequest.Job.TaskGroups[0].TaskSpec.MaxRunDuration = durationpb.New(maxRunDuration)
 			}
 		}
-		bootDiskMib, exists := jt.ResourceLimits["bootdiskmib"]
+		bootDiskMib, exists := jt.ResourceLimits[ResourceLimitBootDisk]
 		if exists {
 			bootdisk, err := strconv.ParseInt(bootDiskMib, 10, 64)
 			if err != nil {
@@ -195,7 +213,7 @@ echo 'Prolog'
 				jobRequest.Job.TaskGroups[0].TaskSpec.ComputeResource.BootDiskMib = bootdisk
 			}
 		}
-		cpuMili, exists := jt.ResourceLimits["cpumilli"]
+		cpuMili, exists := jt.ResourceLimits[ResourceLimitCPUMilli]
 		if exists {
 			cpu, err := strconv.ParseInt(cpuMili, 10, 64)
 			if err != nil {
@@ -217,7 +235,8 @@ echo 'Prolog'
 
 	switch jt.JobCategory {
 	case JobCategoryScriptPath:
-		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Script_{
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].
+			Executable = &batchpb.Runnable_Script_{
 			Script: &batchpb.Runnable_Script{
 				Command: &batchpb.Runnable_Script_Path{
 					Path: jt.RemoteCommand,
@@ -225,7 +244,8 @@ echo 'Prolog'
 			},
 		}
 	case JobCategoryScript:
-		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Script_{
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].
+			Executable = &batchpb.Runnable_Script_{
 			Script: &batchpb.Runnable_Script{
 				Command: &batchpb.Runnable_Script_Text{
 					Text: jt.RemoteCommand,
@@ -237,14 +257,16 @@ echo 'Prolog'
 
 		// in case of a GPU job we need to add the --gpus all option
 		additionalOption := ""
-		if t, count, exists := GetAcceleratorsExtension(jt); exists && count > 0 && strings.HasPrefix(t, "nvidia") {
+		if t, count, exists := GetAcceleratorsExtension(jt); exists &&
+			count > 0 && strings.HasPrefix(t, "nvidia") {
 			additionalOption = " --gpus all --device /dev/nvidiactl --device /dev/nvidia-uvm --device /dev/nvidia-uvm-tools"
 			for i := 0; i < int(count); i++ {
 				additionalOption += fmt.Sprintf(" --device /dev/nvidia%d", i)
 			}
 		}
 
-		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable = &batchpb.Runnable_Container_{
+		jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].
+			Executable = &batchpb.Runnable_Container_{
 			Container: &batchpb.Runnable_Container{
 				ImageUri:   jt.JobCategory,
 				Username:   "",
@@ -257,7 +279,8 @@ echo 'Prolog'
 					"/root/.ssh:/root/.ssh",
 					//"/etc/hosts:/etc/hosts",
 				},
-				Options: "--network=host --ipc=host --pid=host --privileged --uts=host" + additionalOption,
+				Options: "--network=host --ipc=host --pid=host --privileged --uts=host" +
+					additionalOption,
 			},
 		}
 
@@ -266,8 +289,11 @@ echo 'Prolog'
 	dockerOptionsExtension, exists := GetDockerOptionsExtension(jt)
 	if exists {
 		// override docker extensions
-		if _, ok := jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); ok {
-			jobRequest.Job.TaskGroups[0].TaskSpec.Runnables[execPosition].Executable.(*batchpb.Runnable_Container_).Container.Options = dockerOptionsExtension
+		if _, ok := jobRequest.Job.TaskGroups[0].TaskSpec.
+			Runnables[execPosition].Executable.(*batchpb.Runnable_Container_); ok {
+			jobRequest.Job.TaskGroups[0].TaskSpec.
+				Runnables[execPosition].Executable.(*batchpb.Runnable_Container_).
+				Container.Options = dockerOptionsExtension
 		} else {
 			return nil, fmt.Errorf("docker option extensions set but no container image set")
 		}
@@ -522,4 +548,24 @@ func GetJobTemplateFromBase64(base64encondedJT string) (drmaa2interface.JobTempl
 		return jt, fmt.Errorf("could not unmarshal job template: %v", err)
 	}
 	return jt, nil
+}
+
+// DefaultCPUMilli returns the CPU resource limit in milli cores which
+// fits to the given machine type.
+func DefaultCPUMilli(machine string) int64 {
+	/* Examples:
+	f1-micro              europe-west2-c             1     0.60
+	g1-small              europe-west2-c             1     1.70
+	m1-megamem-96         europe-west2-c             96    1433.60
+	m1-ultramem-160       europe-west2-c             160   3844.00
+	m1-ultramem-40        europe-west2-c             40    961.00
+	m1-ultramem-80        europe-west2-c             80    1922.00
+	*/
+	parts := strings.Split(machine, "-")
+	// last part is a number then use it as core
+	cores, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return defaultCPUMilli
+	}
+	return int64(cores * 1000)
 }

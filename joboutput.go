@@ -13,7 +13,7 @@ const (
 	BatchTaskLogs = "batch_task_logs"
 )
 
-func GetJobOutput(projectID, jobUid string) ([]string, error) {
+func GetJobOutput(projectID, jobUid string, limit int64) ([]string, error) {
 	ctx := context.Background()
 
 	adminClient, err := logadmin.NewClient(ctx, projectID)
@@ -27,7 +27,12 @@ func GetJobOutput(projectID, jobUid string) ([]string, error) {
 			projectID, BatchTaskLogs, jobUid)),
 	)
 
-	lines := make([]string, 0, 64)
+	var lines []string
+	if limit != 0 {
+		lines = make([]string, 0, limit)
+	} else {
+		lines = make([]string, 0, 64)
+	}
 
 	for {
 		// how to distinguish between stdout and stderr?
@@ -39,17 +44,25 @@ func GetJobOutput(projectID, jobUid string) ([]string, error) {
 			return nil, fmt.Errorf("could not fetch log entry: %w", err)
 		}
 		lines = append(lines, logEntry.Payload.(string))
+		if limit != 0 && int64(len(lines)) > limit {
+			lines = lines[1:]
+		}
 	}
 
 	return lines, nil
 }
 
-func (t *GCPBatchTracker) JobOutput(jobID string) ([]string, error) {
+// JobOutput is not part of JobTracker interface but it could be a future
+// JobOutputer interface extension. This would be also useful for k8s,
+// Docker, and other JobTracker which currently store the output as
+// JobInfo extension.
+// If lastNLines is 0 then all lines are returned.
+func (t *GCPBatchTracker) JobOutput(jobID string, lastNLines int64) ([]string, error) {
 	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
 		Name: jobID,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return GetJobOutput(t.project, job.Uid)
+	return GetJobOutput(t.project, job.Uid, lastNLines)
 }

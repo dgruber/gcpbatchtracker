@@ -12,6 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// make sure you are logged in with gcloud auth application-default login
+
 func credentialsCheck() bool {
 	if os.Getenv("GCPBATCHTRACKER_PROJECT") == "" {
 		return false
@@ -78,15 +80,29 @@ var _ = Describe("GCP Batch tracker", func() {
 			if !credentialsCheck() {
 				Skip("Credentials not set")
 			}
+
 			t, err := NewGCPBatchTracker(
 				"testsession",
 				os.Getenv("GCPBATCHTRACKER_PROJECT"),
 				os.Getenv("GCPBATCHTRACKER_LOCATION")) // like "us-central1"
 			Expect(err).ToNot(HaveOccurred())
+
 			jobs, err := t.ListJobs()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(jobs).ToNot(BeNil())
-			Expect(len(jobs)).To(BeNumerically(">", 0))
+			Expect(len(jobs)).To(BeNumerically(">=", 0))
+
+			for _, job := range jobs {
+				ji, err := t.JobInfo(job)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ji.ID).To(Equal(job))
+
+				Expect(ji.ExtensionList).NotTo(BeNil())
+				Expect(ji.ExtensionList).To(HaveKey("uid"))
+
+				Expect(ji.AllocatedMachines).NotTo(BeNil())
+			}
+
 		})
 
 	})

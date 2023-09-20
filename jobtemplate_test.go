@@ -75,15 +75,25 @@ var _ = Describe("Jobtemplate", func() {
 				CandidateMachines: []string{"e2-standard-4"},
 			}
 			jt.ResourceLimits = map[string]string{
-				"cpumilli":    "4000",  // 4 cores
+				"cpumilli":    "4500",  // 4 cores
 				"bootdiskmib": "10240", // 10 GB
 				"runtime":     "1h",    // 1 hour
 			}
 			req, err := ConvertJobTemplateToJobRequest("", "project", "location", jt)
 			Expect(err).To(BeNil())
-			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.CpuMilli).To(Equal(int64(4000)))
+			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.CpuMilli).To(Equal(int64(4500)))
 			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.BootDiskMib).To(Equal(int64(10240)))
 			Expect(req.Job.TaskGroups[0].TaskSpec.MaxRunDuration).To(Equal(durationpb.New(time.Hour)))
+
+			jt = drmaa2interface.JobTemplate{
+				JobCategory:       "ubuntu:18.04",
+				MaxSlots:          1, // one machine
+				CandidateMachines: []string{"m1-ultramem-160"},
+			}
+			req, err = ConvertJobTemplateToJobRequest("", "project", "location", jt)
+			Expect(err).To(BeNil())
+			// it should set per default to the expected amount of milli cores
+			Expect(req.Job.TaskGroups[0].TaskSpec.ComputeResource.CpuMilli).To(Equal(int64(160000)))
 		})
 
 	})
