@@ -35,7 +35,18 @@ func BatchJobToJobInfo(project string, job *batchpb.Job) (drmaa2interface.JobInf
 	ji.State, ji.SubState, _ = ConvertJobState(job)
 
 	ji.ExtensionList = make(map[string]string)
-	ji.ExtensionList["uid"] = job.Uid
+	ji.ExtensionList[ExtensionJobInfoJobUID] = job.Uid
+
+	// store job template in extension
+	for _, group := range job.GetTaskGroups() {
+		if group.TaskSpec != nil && group.TaskSpec.Environment != nil &&
+			group.TaskSpec.Environment.Variables != nil {
+			value, exists := group.TaskSpec.Environment.Variables[EnvJobTemplate]
+			if exists {
+				ji.ExtensionList[ExtensionJobInfoJobTemplate] = value
+			}
+		}
+	}
 
 	// too slow
 	/*

@@ -16,9 +16,10 @@ import (
 
 func (t *GCPBatchTracker) JobTemplate(jobID string) (drmaa2interface.JobTemplate, error) {
 	// get job template from env variables
-	job, err := t.client.GetJob(context.Background(), &batchpb.GetJobRequest{
-		Name: jobID,
-	})
+	job, err := t.client.GetJob(context.Background(),
+		&batchpb.GetJobRequest{
+			Name: jobID,
+		})
 	if err != nil {
 		return drmaa2interface.JobTemplate{},
 			fmt.Errorf("could not get job %s: %v", jobID, err)
