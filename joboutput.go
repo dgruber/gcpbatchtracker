@@ -25,10 +25,11 @@ func GetJobOutput(projectID, jobUid string, limit int64) ([]string, error) {
 	iter := adminClient.Entries(ctx,
 		logadmin.Filter(fmt.Sprintf(`logName = "projects/%s/logs/%s" AND labels.job_uid=%s`,
 			projectID, BatchTaskLogs, jobUid)),
+		logadmin.NewestFirst(), // reverse order
 	)
 
 	var lines []string
-	if limit != 0 {
+	if limit > 0 {
 		lines = make([]string, 0, limit)
 	} else {
 		lines = make([]string, 0, 64)
@@ -44,9 +45,15 @@ func GetJobOutput(projectID, jobUid string, limit int64) ([]string, error) {
 			return nil, fmt.Errorf("could not fetch log entry: %w", err)
 		}
 		lines = append(lines, logEntry.Payload.(string))
-		if limit != 0 && int64(len(lines)) > limit {
-			lines = lines[1:]
+		if limit > 0 && int64(len(lines)) >= limit {
+			break
 		}
+	}
+
+	// reverse order of lines (change to slices.Reverse() in 1.21)
+	// https://cs.opensource.google/go/go/+/master:src/slices/slices.go;l=488
+	for i, j := 0, len(lines)-1; i < j; i, j = i+1, j-1 {
+		lines[i], lines[j] = lines[j], lines[i]
 	}
 
 	return lines, nil

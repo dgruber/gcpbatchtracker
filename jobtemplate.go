@@ -65,9 +65,7 @@ func ConvertJobTemplateToJobRequest(session, project, location string, jt drmaa2
 
 	prolog, _ := GetMachinePrologExtension(jt)
 	if prolog == "" {
-		prolog = `#!/bin/sh
-echo 'Prolog'
-`
+		prolog = `#!/bin/sh`
 	}
 
 	epilog, _ := GetMachineEpilogExtension(jt)

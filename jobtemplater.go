@@ -15,6 +15,7 @@ import (
 // backend and does not need to be stored in a local database.
 
 func (t *GCPBatchTracker) JobTemplate(jobID string) (drmaa2interface.JobTemplate, error) {
+
 	// get job template from env variables
 	job, err := t.client.GetJob(context.Background(),
 		&batchpb.GetJobRequest{
