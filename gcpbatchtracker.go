@@ -269,10 +269,13 @@ func (t *GCPBatchTracker) DeleteJob(jobID string) error {
 // processes a JobTemplate and hence also the JobCategory field.
 //
 // JobCategories supported by Google Batch are all container images which can be
-// used by the service. Hence the list of job categories is empty.
+// used by the service. If "$script$" is used as JobCategory then the RemoteCommand
+// field of the JobTemplate is used as script. If "$script_path$" is used as
+// JobCategory then the RemoteCommand field of the JobTemplate is used as path
+// to a script which is executed.
 func (t *GCPBatchTracker) ListJobCategories() ([]string, error) {
-	// list available container images?
-	return []string{}, nil
+	return []string{JobCategoryScriptPath, JobCategoryScript,
+		"<container_image_name>"}, nil
 }
 
 func IsInDRMAA2Session(client *batch.Client, session string, jobID string) bool {
@@ -283,7 +286,6 @@ func IsInDRMAA2Session(client *batch.Client, session string, jobID string) bool 
 			Name: jobID,
 		})
 	if err != nil {
-		fmt.Printf("get job error: %v", err)
 		return false
 	}
 	return IsInJobSession(session, job)

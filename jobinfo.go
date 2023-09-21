@@ -44,6 +44,7 @@ func BatchJobToJobInfo(project string, job *batchpb.Job) (drmaa2interface.JobInf
 			value, exists := group.TaskSpec.Environment.Variables[EnvJobTemplate]
 			if exists {
 				ji.ExtensionList[ExtensionJobInfoJobTemplate] = value
+				break
 			}
 		}
 	}
